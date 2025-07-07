@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
-		"build": "npx prisma generate && next build",
+		"build": "npx prisma generate --no-engine && next build",
 		"start": "next start",
 		"lint": "next lint",
 		"postinstall": "npx prisma generate"
@@ -38,7 +38,7 @@
 		"@tailwindcss/postcss": "^4",
 		"eslint": "^9",
 		"eslint-config-next": "15.3.2",
-		"prisma": "^6.10.1",
+		"prisma": "^6.11.1",
 		"tailwindcss": "^4"
 	},
 	"prisma": {
