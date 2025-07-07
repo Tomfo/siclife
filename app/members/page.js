@@ -143,7 +143,15 @@ export default function RegisteredMembersPage() {
 
 	const fetchUsers = async () => {
 		const res = await fetch(
-			`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`
+			`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`,
+			{
+				headers: {
+					'Content-Type': 'application/json',
+					'Access-Control-Allow-Origin': '*',
+					'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+					'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+				},
+			}
 		);
 		const data = await res.json();
 		setUsers(data);
