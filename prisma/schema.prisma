@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Person {
+  id             Int      @id @default(autoincrement())
+  nationalId     String   @unique
+  idType         IdType
+  firstName      String
+  middleName     String
+  lastName       String
+  gender         Sex
+  birthday       DateTime
+  spouseFullname String
+  spousebirthday DateTime
+  email          String
+  telephone      String
+  residence      String
+  children       Child[]
+  parents        Parent[]
+  underlying     Boolean
+  condition      String
+  declaration    Boolean
+  createdAt      DateTime @default(now())
+}
+
+model Child {
+  id       Int      @id @default(autoincrement())
+  fullName String
+  birthday DateTime
+  Person   Person?  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId Int?
+}
+
+model Parent {
+  id           Int          @id @default(autoincrement())
+  fullName     String
+  birthday     DateTime
+  relationship RelationType
+  Person       Person?      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId     Int?
+}
+
+model Admin {
+  id       String @id
+  username String @unique
+}
+
+enum Sex {
+  Male
+  Female
+}
+
+enum RelationType {
+  Father
+  Mother
+  Inlaw
+}
+
+enum IdType {
+  GhCard
+  Passport
+}
