@@ -80,7 +80,9 @@ export default function EditDetailsPage() {
 		async function fetchUser() {
 			setError('');
 			try {
-				const res = await fetch(`/api/members/${id}`);
+				const res = await fetch(
+					`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`
+				);
 				if (!res.ok) {
 					console.log('cant get data');
 					const err = await res.json();
@@ -131,13 +133,16 @@ export default function EditDetailsPage() {
 
 	const onSubmit = async (data) => {
 		try {
-			const response = await fetch(`/api/members/${id}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(data),
-			});
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`,
+				{
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify(data),
+				}
+			);
 
 			if (response.ok) {
 				setOpen(true);

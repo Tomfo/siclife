@@ -81,7 +81,9 @@ export default function EditMemeberDetailsPage() {
 			setError('');
 			try {
 				console.log('id to edit', id);
-				const res = await fetch(`/api/members/${id}`);
+				const res = await fetch(
+					`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`
+				);
 				if (!res.ok) {
 					console.log('cant get data');
 					const err = await res.json();
@@ -134,13 +136,16 @@ export default function EditMemeberDetailsPage() {
 		try {
 			//	await apiRequest(`posts/${id}`, 'PUT', data);
 			console.log('send  for update', id, data);
-			const response = await fetch(`/api/members/${id}`, {
-				method: 'PUT',
-				// headers: {
-				// 	'Content-Type': 'application/json',
-				// },
-				body: JSON.stringify(data),
-			});
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`,
+				{
+					method: 'PUT',
+					// headers: {
+					// 	'Content-Type': 'application/json',
+					// },
+					body: JSON.stringify(data),
+				}
+			);
 			//const result = await res.data;
 			setOpen(true);
 		} catch (error) {

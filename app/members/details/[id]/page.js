@@ -94,7 +94,9 @@ export default function MemberViewPage() {
 		async function fetchUser() {
 			setError('');
 			try {
-				const res = await fetch(`/api/members/${id}`);
+				const res = await fetch(
+					`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`
+				);
 				if (!res.ok) {
 					const err = await res.json();
 					setError(err.error || 'User not found');

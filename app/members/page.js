@@ -125,9 +125,12 @@ export default function RegisteredMembersPage() {
 	const handleConfirmDelete = async () => {
 		try {
 			// Replace with actual DELETE request
-			await fetch(`/api/members/${selectedUser.id}`, {
-				method: 'DELETE',
-			});
+			await fetch(
+				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${selectedUser.id}`,
+				{
+					method: 'DELETE',
+				}
+			);
 
 			// Remove user locally
 			setUsers(users.filter((u) => u.id !== selectedUser.id));
@@ -139,7 +142,9 @@ export default function RegisteredMembersPage() {
 	};
 
 	const fetchUsers = async () => {
-		const res = await fetch('/api/members');
+		const res = await fetch(
+			`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`
+		);
 		const data = await res.json();
 		setUsers(data);
 		setFilteredUsers(data);
