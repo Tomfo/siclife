@@ -12,7 +12,10 @@ export default function InsurancePolicyDashboard() {
 				height={600}
 				priority={true}
 				style={{ width: 600, height: 600 }}
-				alt='Picture of SIC'></Image>
+				alt='Picture of SIC'
+				unoptimized
+			/>
+
 			<div className='m-5'>
 				<Link
 					underline='none'
