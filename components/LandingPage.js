@@ -3,22 +3,13 @@ import Image from 'next/image';
 export default function LandingPage() {
 	return (
 		<>
-			{/* <Image
-				src='/sic.png'
-				alt='Logo'
-				width={600}
-				height={600}
-				className='rounded-full'
-				style={{ width: 600, height: 600 }}
-				unoptimized
-			/> */}
 			<Image
 				src='/Veltista_Blackcouple.png'
-				alt='Logo'
-				width={600}
-				height={600}
+				alt='logo'
+				width={500}
+				height={500}
 				className='rounded-full'
-				style={{ width: 600, height: 600 }}
+				style={{ width: 500, height: 500 }}
 				unoptimized
 			/>
 		</>
