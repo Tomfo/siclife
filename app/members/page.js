@@ -1,52 +1,50 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useMediaQuery } from '@mui/material';
-import { useTheme, styled } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import AddIcon from '@mui/icons-material/Add';
 import PreviewRoundedIcon from '@mui/icons-material/PreviewRounded';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
 import {
-	Modal,
-	Box,
-	Typography,
-	Alert,
-	CircularProgress,
-	Fade,
-	TextField,
-	Backdrop,
 	Table,
 	TableHead,
 	TableBody,
 	TableCell,
 	TableContainer,
-	TableFooter,
-	TablePagination,
 	TableRow,
 	Paper,
 	IconButton,
 	Chip,
-	Container,
-	Card,
-	CardContent,
-	CardActions,
-	CardHeader,
-	Button,
 	Avatar,
+	TablePagination,
+	Box,
+	Typography,
 } from '@mui/material';
 import Link from 'next/link';
 import Image from 'next/image';
+
+// Constants
+const TABLE_HEADERS = [
+	{ id: 'info', label: 'Info', mobile: false },
+	{ id: 'gender', label: 'Gender', mobile: true },
+	{ id: 'email', label: 'Email', mobile: true },
+	{ id: 'telephone', label: 'Telephone', mobile: true },
+	{ id: 'status', label: 'Status', mobile: true },
+	{ id: 'actions', label: 'Actions', mobile: false },
+];
+
+const ROWS_PER_PAGE_OPTIONS = [5, 10, 25];
+
 // Styled components
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
 	[`&.${TableCell.head}`]: {
 		backgroundColor: '#00ACAC',
 		color: theme.palette.common.white,
-		// fontWeight: 600,
 		fontSize: 15,
 		letterSpacing: 0.5,
 	},
@@ -65,15 +63,11 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 	},
 }));
 
-// Responsive cell component
-function ResponsiveInfoCell({ member }) {
-	const { user } = useUser();
-	const isMobile = useMediaQuery('(max-width:640px)');
-	const primaryEmail = user?.primaryEmailAddress?.emailAddress;
-
+// MemberInfoCell component
+function MemberInfoCell({ member }) {
 	return (
 		<Box sx={{ display: 'flex', alignItems: 'center' }}>
-			<Avatar src={'/defaultPhoto.png'} sx={{ width: 32, height: 32, mr: 1 }} />
+			<Avatar src='/defaultPhoto.png' sx={{ width: 32, height: 32, mr: 1 }} />
 			<Box
 				sx={{
 					display: 'flex flex-col',
@@ -91,49 +85,89 @@ function ResponsiveInfoCell({ member }) {
 	);
 }
 
+// StatusChip component
+function StatusChip({ declaration }) {
+	return (
+		<Chip
+			size='small'
+			icon={declaration ? <CheckCircleIcon /> : <CancelIcon />}
+			label={declaration ? 'Complete' : 'Pending'}
+			color={declaration ? 'success' : 'error'}
+			variant='outlined'
+		/>
+	);
+}
+
+// ActionButton component
+function ActionButton({ href, onClick, icon: Icon, color, label }) {
+	const buttonProps = href ? { component: Link, href } : { onClick };
+
+	return (
+		<IconButton
+			size='small'
+			sx={{
+				color: 'white',
+				bgcolor: color,
+				'&:hover': { bgcolor: 'green' },
+			}}
+			aria-label={label}
+			{...buttonProps}>
+			<Icon fontSize='small' />
+		</IconButton>
+	);
+}
+
 export default function RegisteredMembersPage() {
 	const [users, setUsers] = useState([]);
 	const [filteredUsers, setFilteredUsers] = useState([]);
 	const [searchTerm, setSearchTerm] = useState('');
 	const [page, setPage] = useState(0);
 	const [rowsPerPage, setRowsPerPage] = useState(5);
-	const { user } = useUser();
 	const [selectedUser, setSelectedUser] = useState(null);
+
+	const { user } = useUser();
 	const isMobile = useMediaQuery('(max-width:640px)');
 	const primaryEmail = user?.primaryEmailAddress?.emailAddress;
 
-	const handleDeleteClick = async (record) => {
-		// Perform your delete operation here
-		console.log(`Deleting user with id ${record.id}`);
-		setSelectedUser(record);
-		// const confirmDelete = confirm(
-		// 	`Are you sure you want to delete this user? ${record.name}`
-		// );
-		// if (!confirmDelete) return;
-		// await fetch(`/api/members/${record.id}`, {
-		// 	method: 'DELETE',
-		// });
+	// Fetch users from API
+	const fetchUsers = useCallback(async () => {
+		try {
+			const res = await fetch(
+				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`,
+				{
+					headers: {
+						'Content-Type': 'application/json',
+						'Access-Control-Allow-Origin': '*',
+					},
+				}
+			);
+			const data = await res.json();
+			setUsers(data);
+			setFilteredUsers(data);
+		} catch (error) {
+			console.error('Failed to fetch users:', error);
+		}
+	}, []);
 
-		// Remove from UI immediately
-		//	setUsers((prev) => prev.filter((user) => user.id !== record.id));
-	};
-
-	const handleCloseDialog = () => {
-		setSelectedUser(null);
+	// Handle user deletion
+	const handleDeleteClick = (user) => {
+		setSelectedUser({
+			id: user.id,
+			name: `${user.firstName} ${user.lastName}`,
+		});
 	};
 
 	const handleConfirmDelete = async () => {
+		if (!selectedUser) return;
+
 		try {
-			// Replace with actual DELETE request
 			await fetch(
 				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${selectedUser.id}`,
 				{
 					method: 'DELETE',
 				}
 			);
-
-			// Remove user locally
-			setUsers(users.filter((u) => u.id !== selectedUser.id));
+			setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
 		} catch (err) {
 			console.error('Delete failed', err);
 		} finally {
@@ -141,48 +175,45 @@ export default function RegisteredMembersPage() {
 		}
 	};
 
-	const fetchUsers = async () => {
-		const res = await fetch(
-			`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`,
-			{
-				headers: {
-					'Content-Type': 'application/json',
-					'Access-Control-Allow-Origin': '*',
-					'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-					'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-				},
-			}
-		);
-		const data = await res.json();
-		setUsers(data);
-		setFilteredUsers(data);
-	};
-
+	// Filter users based on search term
 	useEffect(() => {
-		fetchUsers();
-	}, []);
+		if (!searchTerm) {
+			setFilteredUsers(users);
+			return;
+		}
 
-	useEffect(() => {
 		const term = searchTerm.toLowerCase();
-		const filtered = users.filter(
-			(user) =>
-				user.firstName.toLowerCase().includes(term) ||
-				user.email.toLowerCase().includes(term) ||
-				user.middleName.toLowerCase().includes(term) ||
-				user.lastName.toLowerCase().includes(term)
+		const filtered = users.filter((user) =>
+			['firstName', 'email', 'middleName', 'lastName'].some((field) =>
+				user[field]?.toLowerCase().includes(term)
+			)
 		);
+
 		setFilteredUsers(filtered);
 		setPage(0);
 	}, [searchTerm, users]);
 
-	const handleChangePage = (event, newPage) => setPage(newPage);
+	// Initial data fetch
+	useEffect(() => {
+		fetchUsers();
+	}, [fetchUsers]);
+
+	// Pagination handlers
+	const handleChangePage = (_, newPage) => setPage(newPage);
 	const handleChangeRowsPerPage = (event) => {
 		setRowsPerPage(parseInt(event.target.value, 10));
 		setPage(0);
 	};
 
+	// Calculate visible rows
+	const visibleRows = filteredUsers.slice(
+		page * rowsPerPage,
+		page * rowsPerPage + rowsPerPage
+	);
+
 	return (
 		<div className='m-5 bg-white p-2'>
+			{/* Search and Title Section */}
 			<div className='flex items-center justify-between'>
 				<div className='flex-1 flex justify-items-start'>
 					<div className='flex items-center gap-2 bg-gray-50 rounded-md ring-1 ring-gray-300 px-3 py-1 w-[260px] mb-2'>
@@ -203,148 +234,95 @@ export default function RegisteredMembersPage() {
 				</div>
 			</div>
 
+			{/* Members Table */}
 			<TableContainer
 				component={Paper}
 				sx={{ width: '100%', overflowX: 'auto' }}>
 				<Table aria-label='members table' sx={{ minWidth: 640 }}>
-					<TableHead
-						sx={{
-							background: '#c4c7d4',
-							color: 'white',
-						}}>
+					<TableHead sx={{ background: '#c4c7d4', color: 'white' }}>
 						<TableRow>
-							<StyledTableCell>Info</StyledTableCell>
-							{/* {!isMobile && <StyledTableCell>Identification</StyledTableCell>} */}
-							{!isMobile && <StyledTableCell>Gender</StyledTableCell>}
-							{/* {!isMobile && <StyledTableCell>Birthday</StyledTableCell>} */}
-							{!isMobile && <StyledTableCell>Email</StyledTableCell>}
-							{!isMobile && <StyledTableCell>Telephone</StyledTableCell>}
-							{!isMobile && <StyledTableCell>Status</StyledTableCell>}
-							<StyledTableCell>Actions</StyledTableCell>
+							{TABLE_HEADERS.map(
+								(header) =>
+									(!isMobile || !header.mobile) && (
+										<StyledTableCell key={header.id}>
+											{header.label}
+										</StyledTableCell>
+									)
+							)}
 						</TableRow>
 					</TableHead>
-					<TableBody>
-						{filteredUsers
-							.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-							.map((user) => (
-								<StyledTableRow key={user.id}>
-									<StyledTableCell>
-										<ResponsiveInfoCell
-											member={{
-												id: user.id,
-												middleName: user.middleName,
-												firstName: user.firstName,
-												lastName: user.lastName,
-												declaration: user.declaration,
-												email: user.email,
-											}}
-										/>
-									</StyledTableCell>
-									{/* {!isMobile && (
-                    <StyledTableCell>
-                      <strong>{user.idType}</strong>
-                      <br />
-                      {user.nationalId}
-                    </StyledTableCell>
-                  )} */}
-									{!isMobile && (
-										<StyledTableCell>{user.gender}</StyledTableCell>
-									)}
 
-									{!isMobile && (
+					<TableBody>
+						{visibleRows.map((user) => (
+							<StyledTableRow key={user.id}>
+								{/* Member Info */}
+								<StyledTableCell>
+									<MemberInfoCell
+										member={{
+											id: user.id,
+											middleName: user.middleName,
+											firstName: user.firstName,
+											lastName: user.lastName,
+											declaration: user.declaration,
+											email: user.email,
+										}}
+									/>
+								</StyledTableCell>
+
+								{/* Additional Columns (hidden on mobile) */}
+								{!isMobile && (
+									<>
+										<StyledTableCell>{user.gender}</StyledTableCell>
 										<StyledTableCell sx={{ wordBreak: 'break-all' }}>
 											{user.email}
 										</StyledTableCell>
-									)}
-									{!isMobile && (
 										<StyledTableCell sx={{ wordBreak: 'break-all' }}>
 											{user.telephone}
 										</StyledTableCell>
-									)}
-									{!isMobile && (
 										<StyledTableCell>
-											<Chip
-												size='small'
-												icon={
-													user.declaration ? (
-														<CheckCircleIcon />
-													) : (
-														<CancelIcon />
-													)
-												}
-												label={user.declaration ? 'Complete' : 'Pending'}
-												color={user.declaration ? 'success' : 'error'}
-												variant='outlined'
-											/>
+											<StatusChip declaration={user.declaration} />
 										</StyledTableCell>
-									)}
-									<StyledTableCell>
-										{user.email === primaryEmail && (
-											<Box sx={{ display: 'flex', gap: 1 }}>
-												<Link href={`/members/details/${user.id}`} passHref>
-													<IconButton
-														size='small'
-														// sx={{ bgcolor: '#CC6CE7', color: 'white' }}
-														sx={{
-															color: 'white',
-															bgcolor: '#CC6CE7', // Light gray from theme
-															'&:hover': {
-																bgcolor: 'green', // Light red from theme (if using custom palette)
-															},
-														}}
-														aria-label='View'>
-														<PreviewRoundedIcon fontSize='small' />
-													</IconButton>
-												</Link>
+									</>
+								)}
 
-												<Link href={`/members/${user.id}/edit`} passHref>
-													<IconButton
-														size='small'
-														// sx={{ bgcolor: '#060270', color: 'white' }}
-														sx={{
-															color: 'white',
-															bgcolor: '#060270', // Light gray from theme
-															'&:hover': {
-																bgcolor: 'green', // Light red from theme (if using custom palette)
-															},
-														}}
-														aria-label='Edit'>
-														<EditIcon fontSize='smaall' />
-													</IconButton>
-												</Link>
-												<div>
-													<IconButton
-														onClick={() =>
-															handleDeleteClick({
-																id: user.id,
-																name: user.firstName + ' ' + user.lastName,
-															})
-														}
-														size='small'
-														// sx={{ bgcolor: '#D20103', color: 'white' }}
-														sx={{
-															color: 'white',
-															bgcolor: '#D20103', // Light gray from theme
-															'&:hover': {
-																bgcolor: 'green', // Light red from theme (if using custom palette)
-															},
-														}}
-														aria-label='Delete'>
-														<DeleteIcon fontSize='smaall' />
-													</IconButton>
-												</div>
-											</Box>
-										)}
-									</StyledTableCell>
-								</StyledTableRow>
-							))}
+								{/* Actions */}
+								<StyledTableCell>
+									{user.email === primaryEmail && (
+										<Box sx={{ display: 'flex', gap: 1 }}>
+											<ActionButton
+												href={`/members/details/${user.id}`}
+												icon={PreviewRoundedIcon}
+												color='#CC6CE7'
+												label='View'
+											/>
+											<ActionButton
+												href={`/members/${user.id}/edit`}
+												icon={EditIcon}
+												color='#060270'
+												label='Edit'
+											/>
+											<ActionButton
+												onClick={() => handleDeleteClick(user)}
+												icon={DeleteIcon}
+												color='#D20103'
+												label='Delete'
+											/>
+										</Box>
+									)}
+								</StyledTableCell>
+							</StyledTableRow>
+						))}
+
 						{filteredUsers.length === 0 && (
 							<TableRow>
-								<TableCell colSpan={4}>No users found.</TableCell>
+								<TableCell colSpan={TABLE_HEADERS.length}>
+									No users found.
+								</TableCell>
 							</TableRow>
 						)}
 					</TableBody>
 				</Table>
+
 				<TablePagination
 					component='div'
 					count={filteredUsers.length}
@@ -352,12 +330,14 @@ export default function RegisteredMembersPage() {
 					onPageChange={handleChangePage}
 					rowsPerPage={rowsPerPage}
 					onRowsPerPageChange={handleChangeRowsPerPage}
-					rowsPerPageOptions={[5, 10, 25]}
+					rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
 				/>
 			</TableContainer>
+
+			{/* Delete Confirmation Dialog */}
 			<ConfirmDeleteDialog
 				open={!!selectedUser}
-				onClose={handleCloseDialog}
+				onClose={() => setSelectedUser(null)}
 				onConfirm={handleConfirmDelete}
 				itemName={selectedUser?.name}
 			/>
