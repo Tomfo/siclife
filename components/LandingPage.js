@@ -13,7 +13,7 @@ export default function LandingPage() {
 				unoptimized
 			/> */}
 			<Image
-				src='/sic.png'
+				src='/Veltista_Blackcouple.png'
 				alt='Logo'
 				width={600}
 				height={600}
