@@ -3,15 +3,15 @@ import Image from 'next/image';
 export default function LandingPage() {
 	return (
 		<>
-			<Image
-				src='/Veltista_Blackcouple.png'
-				alt='logo'
-				width={500}
-				height={500}
-				className='rounded-full'
-				style={{ width: 500, height: 500 }}
-				unoptimized
-			/>
+			<div className='relative w-full max-w-[400px] aspect-square'>
+				<Image
+					src='/Veltista_Blackcouple.png'
+					alt='logo'
+					fill
+					className='rounded-full object-cover'
+					unoptimized
+				/>
+			</div>
 		</>
 	);
 }
