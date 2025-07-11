@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import LandingPage from '@/components/LandingPage';
 import { UserButton } from '@clerk/nextjs';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
@@ -6,16 +6,7 @@ import Typography from '@mui/material/Typography';
 export default function InsurancePolicyDashboard() {
 	return (
 		<div className='flex  flex-col items-center justify-center p-6'>
-			<Image
-				src='/sic.png'
-				width={600}
-				height={600}
-				priority={true}
-				style={{ width: 600, height: 600 }}
-				alt='Picture of SIC'
-				unoptimized
-			/>
-
+			<LandingPage />
 			<div className='m-5'>
 				<Link
 					underline='none'
