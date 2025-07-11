@@ -13,12 +13,12 @@ export default function LandingPage() {
 				unoptimized
 			/> */}
 			<Image
-				src='/moba.png'
+				src='/sic.png'
 				alt='Logo'
-				width={36}
-				height={36}
+				width={600}
+				height={600}
 				className='rounded-full'
-				style={{ width: 36, height: 36 }}
+				style={{ width: 600, height: 600 }}
 				unoptimized
 			/>
 		</>
