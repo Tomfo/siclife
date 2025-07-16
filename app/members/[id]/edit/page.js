@@ -20,7 +20,7 @@ import {
 	faMale,
 	faUserPlus,
 } from '@fortawesome/free-solid-svg-icons';
-import { Button } from '@mui/material';
+import { Button, CircularProgress, Box } from '@mui/material';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Typography from '@mui/material/Typography';
@@ -34,6 +34,7 @@ export default function EditDetailsPage() {
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState('');
 	const [open, setOpen] = useState(false);
+	// const [person, setPerson] = useState(null)
 
 	const MAX_DEPENDANTS = 4;
 	const MAX_PARENTS = 2;
@@ -76,8 +77,8 @@ export default function EditDetailsPage() {
 	});
 
 	// Fetch the current user data
-	useEffect(() => {
-		async function fetchUser() {
+async function fetchUser() {
+	setLoading(true)
 			setError('');
 			try {
 				const res = await fetch(
@@ -124,10 +125,16 @@ export default function EditDetailsPage() {
 					setLoading(false);
 				}
 			} catch (e) {
-				setError('Failed to fetch user.');
+				setError('Failed to fetch Member.');
 				setLoading(false);
+			}finally{
+				setLoading(false)
 			}
 		}
+
+
+	useEffect(() => {
+		
 		fetchUser();
 	}, [id, reset]);
 
@@ -154,6 +161,26 @@ export default function EditDetailsPage() {
 			// reset();
 		}
 	};
+
+if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box mt={4} textAlign="center">
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        <Button variant="contained" onClick={fetchUser}>
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
 
 	return (
 		<form className='m-5 bg-white p-2' onSubmit={handleSubmit(onSubmit)}>
@@ -292,7 +319,7 @@ export default function EditDetailsPage() {
 								<label
 									htmlFor='birthday'
 									className='block text-sm/6 font-medium text-gray-500'>
-									Birthday
+									Birthday (mm-dd-yyyy)
 								</label>
 								<div className='mt-2'>
 									<input
@@ -411,7 +438,7 @@ export default function EditDetailsPage() {
 								<label
 									htmlFor='spouseFullname'
 									className='block text-sm/6 font-medium text-gray-500'>
-									spouseFullName
+									Spouse Full Name
 								</label>
 								<div className='mt-2'>
 									<input
@@ -432,7 +459,7 @@ export default function EditDetailsPage() {
 								<label
 									htmlFor='spousebirthday'
 									className='block text-sm/6 font-medium text-gray-500'>
-									Spouse Birthday
+									Spouse Birthday (mm-dd-yyyy)
 								</label>
 								<div className='mt-2'>
 									<input
@@ -494,7 +521,7 @@ export default function EditDetailsPage() {
 									<label
 										htmlFor={`children.${index}.birthday`}
 										className='block text-sm/6 font-medium text-gray-500'>
-										Birthday:
+										Birthday (mm-dd-yyyy):
 									</label>
 
 									<div className='mt-2'>
@@ -534,7 +561,7 @@ export default function EditDetailsPage() {
 							// className='rounded-md bg-green-600 p-2.5 border border-transparent text-left text-sm  text-white transition-all shadow-sm hover:shadow-lg focus:bg-green-700 focus:shadow-none active:bg-green-700 hover:bg-green-700 active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none'
 							type='button'
 							disabled={childFields.length >= MAX_DEPENDANTS}
-							onClick={() => appendChild({ fullName: '', birthday: '' })}>
+							onClick={() => appendChild({ fullName: '', birthday : '' })}>
 							<FontAwesomeIcon icon={faChild} size='lg' />
 							&nbsp;Add Another Child
 						</button>
@@ -583,7 +610,7 @@ export default function EditDetailsPage() {
 									<label
 										htmlFor={`parents.${index}.birthday`}
 										className='block text-sm/6 font-medium text-gray-500'>
-										Birthday:
+										Birthday (mm-dd-yyyy):
 									</label>
 
 									<div className='mt-2'>

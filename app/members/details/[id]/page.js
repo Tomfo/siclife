@@ -11,7 +11,7 @@ import {
 	Paper,
 	Chip,
 	Stack,
-	IconButton,
+	IconButton,CircularProgress,Alert,Button,
 } from '@mui/material';
 
 // --- Section Title Component ---
@@ -83,15 +83,18 @@ function ArrayFieldDisplay({ label, items, renderItem }) {
  * @param {object} props
  * @param {object} props.data - Member data to display (should match the member form fields)
  */
+
+
 export default function MemberViewPage() {
 	const params = useParams();
 	const { id, formType } = params;
-
 	const [user, setUser] = useState(null);
 	const [error, setError] = useState('');
+	const [loading, setLoading] = useState(true);
+async function fetchUser(params) {
+	
 
-	useEffect(() => {
-		async function fetchUser() {
+			setLoading(true)
 			setError('');
 			try {
 				const res = await fetch(
@@ -99,47 +102,51 @@ export default function MemberViewPage() {
 				);
 				if (!res.ok) {
 					const err = await res.json();
-					setError(err.error || 'User not found');
+					setError(err.error || 'Member not found');
 					setUser(null);
 				} else {
 					const data = await res.json();
 					setUser(data);
 				}
 			} catch (e) {
-				setError('Failed to fetch user.');
+				setError('Failed to fetch member.');
 				setUser(null);
+			}finally{
+				setLoading(false)
 			}
 		}
+	useEffect(() => {
+		
 		if (id) fetchUser();
 	}, [id]);
 
-	if (error) {
-		return (
-			<div
-				style={{
-					maxWidth: 450,
-					margin: '30px auto',
-					fontFamily: 'sans-serif',
-				}}>
-				<h1>User Details</h1>
-				<p style={{ color: 'red' }}>{error}</p>
-			</div>
-		);
-	}
+		if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-	if (!user) {
-		return (
-			<div
-				style={{
-					maxWidth: 450,
-					margin: '30px auto',
-					fontFamily: 'sans-serif',
-				}}>
-				<h1>User Details</h1>
-				<p>Loading...</p>
-			</div>
-		);
-	}
+  if (error) {
+    return (
+      <Box mt={4} textAlign="center">
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        <Button variant="contained" onClick={fetchUser}>
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Box mt={4} textAlign="center">
+        <Alert severity="info">Record not Found.</Alert>
+      </Box>
+    );
+  }
+
 
 	return (
 		<Box
@@ -185,7 +192,7 @@ export default function MemberViewPage() {
 				<FieldDisplay label='First Name' value={user.firstName} />
 				<FieldDisplay label='Middle Name' value={user.middleName} />
 				<FieldDisplay label='Last Name' value={user.lastName} />
-				<FieldDisplay label='Birthday' value={user.birthday.split('T')[0]} />
+				<FieldDisplay label='Birthday (yyyy-mm-dd)' value={user.birthday.split('T')[0]} />
 				<FieldDisplay label='Gender' value={user.gender} />
 			</Grid>
 			{/* Contact Details */}
@@ -201,7 +208,7 @@ export default function MemberViewPage() {
 			<Grid container spacing={2}>
 				<FieldDisplay label='Full Name' value={user.spouseFullname} />
 				<FieldDisplay
-					label='Birthday'
+					label='Birthday (yyyy-mm-dd)'
 					value={user.spousebirthday.split('T')[0]}
 				/>
 			</Grid>
@@ -213,7 +220,7 @@ export default function MemberViewPage() {
 					<Grid container spacing={1}>
 						<FieldDisplay label='Full Name' value={child.fullName} />
 						<FieldDisplay
-							label='Birthday'
+							label='Birthday (yyyy-mm-dd)'
 							value={child.birthday.split('T')[0]}
 						/>
 					</Grid>
@@ -228,7 +235,7 @@ export default function MemberViewPage() {
 					<Grid container spacing={1}>
 						<FieldDisplay label='Full Name' value={parent.fullName} />
 						<FieldDisplay
-							label='Birthday'
+							label='Birthday (yyyy-mm-dd)'
 							value={parent.birthday.split('T')[0]}
 						/>
 						<FieldDisplay label='Relation' value={parent.relationship} />

@@ -24,9 +24,13 @@ import {
 	TablePagination,
 	Box,
 	Typography,
+	Alert,
+	Button,
+	CircularProgress,
 } from '@mui/material';
 import Link from 'next/link';
 import Image from 'next/image';
+import { faL } from '@fortawesome/free-solid-svg-icons';
 
 // Constants
 const TABLE_HEADERS = [
@@ -124,13 +128,16 @@ export default function RegisteredMembersPage() {
 	const [page, setPage] = useState(0);
 	const [rowsPerPage, setRowsPerPage] = useState(5);
 	const [selectedUser, setSelectedUser] = useState(null);
-
+ const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 	const { user } = useUser();
 	const isMobile = useMediaQuery('(max-width:640px)');
 	const primaryEmail = user?.primaryEmailAddress?.emailAddress;
 
 	// Fetch users from API
 	const fetchUsers = useCallback(async () => {
+		 setLoading(true);
+    setError(null);
 		try {
 			const res = await fetch(
 				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`,
@@ -145,7 +152,10 @@ export default function RegisteredMembersPage() {
 			setUsers(data);
 			setFilteredUsers(data);
 		} catch (error) {
-			console.error('Failed to fetch users:', error);
+			setError('Failed to fetch Registered Members')
+			console.error('Failed to fetch Registered Members:', error);
+		}finally{
+setLoading(false)
 		}
 	}, []);
 
@@ -210,6 +220,34 @@ export default function RegisteredMembersPage() {
 		page * rowsPerPage,
 		page * rowsPerPage + rowsPerPage
 	);
+
+
+	if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box mt={4} textAlign="center">
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        <Button variant="contained" onClick={fetchUsers}>
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
+  if (filteredUsers.length === 0) {
+    return (
+      <Box mt={4} textAlign="center">
+        <Alert severity="info">No Registered Members Found.</Alert>
+      </Box>
+    );
+  }
 
 	return (
 		<div className='m-5 bg-white p-2'>
@@ -313,13 +351,6 @@ export default function RegisteredMembersPage() {
 							</StyledTableRow>
 						))}
 
-						{filteredUsers.length === 0 && (
-							<TableRow>
-								<TableCell colSpan={TABLE_HEADERS.length}>
-									No users found.
-								</TableCell>
-							</TableRow>
-						)}
 					</TableBody>
 				</Table>
 
