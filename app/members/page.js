@@ -10,6 +10,8 @@ import PreviewRoundedIcon from '@mui/icons-material/PreviewRounded';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
+import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/app/store/userStore';
 import {
 	Table,
 	TableHead,
@@ -31,6 +33,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { faL } from '@fortawesome/free-solid-svg-icons';
+import { Router } from 'next/router';
 
 // Constants
 const TABLE_HEADERS = [
@@ -103,7 +106,7 @@ function StatusChip({ declaration }) {
 }
 
 // ActionButton component
-function ActionButton({ href, onClick, icon: Icon, color, label }) {
+function ActionButton({ href, onClick, icon: Icon, color, label, as }) {
 	const buttonProps = href ? { component: Link, href } : { onClick };
 
 	return (
@@ -122,22 +125,24 @@ function ActionButton({ href, onClick, icon: Icon, color, label }) {
 }
 
 export default function RegisteredMembersPage() {
+	
 	const [users, setUsers] = useState([]);
 	const [filteredUsers, setFilteredUsers] = useState([]);
 	const [searchTerm, setSearchTerm] = useState('');
 	const [page, setPage] = useState(0);
 	const [rowsPerPage, setRowsPerPage] = useState(5);
 	const [selectedUser, setSelectedUser] = useState(null);
- const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
 	const { user } = useUser();
 	const isMobile = useMediaQuery('(max-width:640px)');
 	const primaryEmail = user?.primaryEmailAddress?.emailAddress;
-
+	const router = useRouter();
+	const setUser = useUserStore((state) => state.setUser);
 	// Fetch users from API
 	const fetchUsers = useCallback(async () => {
-		 setLoading(true);
-    setError(null);
+		setLoading(true);
+		setError(null);
 		try {
 			const res = await fetch(
 				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`,
@@ -152,10 +157,10 @@ export default function RegisteredMembersPage() {
 			setUsers(data);
 			setFilteredUsers(data);
 		} catch (error) {
-			setError('Failed to fetch Registered Members')
+			setError('Failed to fetch Registered Members');
 			console.error('Failed to fetch Registered Members:', error);
-		}finally{
-setLoading(false)
+		} finally {
+			setLoading(false);
 		}
 	}, []);
 
@@ -165,6 +170,22 @@ setLoading(false)
 			id: user.id,
 			name: `${user.firstName} ${user.lastName}`,
 		});
+	};
+
+	// Hanlde user Edit
+	const handleEditClick = (recordId) => {
+		//	router.push(`/members/${userId}/edit`);
+		const user = { id: recordId };
+		setUser(user); // Save user in Zustand
+		router.push('/members/edit/record'); // Navigate without query string
+	};
+
+	// Hanlde user Edit
+	const handleViewClick = (recordId) => {
+		//	router.push(`/members/${userId}/edit`);
+		const user = { id: recordId };
+		setUser(user); // Save user in Zustand
+		router.push('/members/details/view'); // Navigate without query string
 	};
 
 	const handleConfirmDelete = async () => {
@@ -221,33 +242,34 @@ setLoading(false)
 		page * rowsPerPage + rowsPerPage
 	);
 
-
 	if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" mt={4}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+		return (
+			<Box display='flex' justifyContent='center' mt={4}>
+				<CircularProgress />
+			</Box>
+		);
+	}
 
-  if (error) {
-    return (
-      <Box mt={4} textAlign="center">
-        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-        <Button variant="contained" onClick={fetchUsers}>
-          Retry
-        </Button>
-      </Box>
-    );
-  }
+	if (error) {
+		return (
+			<Box mt={4} textAlign='center'>
+				<Alert severity='error' sx={{ mb: 2 }}>
+					{error}
+				</Alert>
+				<Button variant='contained' onClick={fetchUsers}>
+					Retry
+				</Button>
+			</Box>
+		);
+	}
 
-  if (filteredUsers.length === 0) {
-    return (
-      <Box mt={4} textAlign="center">
-        <Alert severity="info">No Registered Members Found.</Alert>
-      </Box>
-    );
-  }
+	if (filteredUsers.length === 0) {
+		return (
+			<Box mt={4} textAlign='center'>
+				<Alert severity='info'>No Registered Members Found.</Alert>
+			</Box>
+		);
+	}
 
 	return (
 		<div className='m-5 bg-white p-2'>
@@ -328,13 +350,14 @@ setLoading(false)
 									{user.email === primaryEmail && (
 										<Box sx={{ display: 'flex', gap: 1 }}>
 											<ActionButton
-												href={`/members/details/${user.id}`}
+												onClick={() => handleViewClick(user.id)}
 												icon={PreviewRoundedIcon}
 												color='#CC6CE7'
 												label='View'
 											/>
 											<ActionButton
-												href={`/members/${user.id}/edit`}
+												//	href={`/members/${user.id}/edit`}
+												onClick={() => handleEditClick(user.id)}
 												icon={EditIcon}
 												color='#060270'
 												label='Edit'
@@ -350,7 +373,6 @@ setLoading(false)
 								</StyledTableCell>
 							</StyledTableRow>
 						))}
-
 					</TableBody>
 				</Table>
 

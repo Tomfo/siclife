@@ -38,15 +38,6 @@ export default function MainHeader() {
 			<div className='max-w-7xl mx-auto px-4 py-2 flex items-center justify-between'>
 				{/* Left: Logo */}
 				<Link href='/' className='flex items-center gap-2'>
-					{/* <Image
-						src='/SIClogo.png'
-						alt='Logo'
-						unoptimized
-						width={100}
-						height={100}
-						style={{ width: 100, height: 100 }}
-						className='rounded-full'
-					/> */}
 					<Image
 						src='/moba.png'
 						alt='Logo'

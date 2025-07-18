@@ -20,20 +20,22 @@ import {
 	faMale,
 	faUserPlus,
 } from '@fortawesome/free-solid-svg-icons';
-import { Button } from '@mui/material';
+import { Button, CircularProgress, Box } from '@mui/material';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Typography from '@mui/material/Typography';
 import { updateMembersById } from '@/lib/members';
-
-export default function EditMemeberDetailsPage() {
+import { useUserStore } from '@/app/store/userStore';
+export default function EditMemberPage() {
 	const params = useParams();
-	const { id } = params;
+	//const { id } = params;
+	const { id } = useUserStore((state) => state.user);
 	const router = useRouter();
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState('');
 	const [open, setOpen] = useState(false);
+	// const [person, setPerson] = useState(null)
 
 	const MAX_DEPENDANTS = 4;
 	const MAX_PARENTS = 2;
@@ -76,78 +78,82 @@ export default function EditMemeberDetailsPage() {
 	});
 
 	// Fetch the current user data
-	useEffect(() => {
-		async function fetchUser() {
-			setError('');
-			try {
-				console.log('id to edit', id);
-				const res = await fetch(
-					`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`
-				);
-				if (!res.ok) {
-					console.log('cant get data');
-					const err = await res.json();
-					setError(err.error || 'User not found');
-					setLoading(false);
-				} else {
-					const person = await res.json();
-					console.log('Editing....', person);
-					const initialData = {
-						nationalId: person.nationalId,
-						idType: person.idType,
-						firstName: person.firstName,
-						middleName: person.middleName,
-						lastName: person.lastName,
-						gender: person.gender,
-						birthday: person.birthday.split('T')[0],
-						spouseFullname: person.spouseFullname,
-						spousebirthday: person.spousebirthday.split('T')[0],
-						email: person.email,
-						telephone: person.telephone,
-						residence: person.residence,
-						underlying: person.underlying,
-						condition: person.condition,
-						declaration: person.declaration,
-						children: person.children.map((child) => ({
-							id: child.id, // Crucial: Keep the ID for existing children
-							fullName: child.fullName,
-							birthday: child.birthday.split('T')[0],
-						})),
-						parents: person.parents.map((parent) => ({
-							id: parent.id, // Crucial: Keep the ID for existing children
-							fullName: parent.fullName,
-							birthday: parent.birthday.split('T')[0],
-							relationship: parent.relationship,
-						})),
-					};
+	async function fetchUser() {
+		setLoading(true);
+		setError('');
+		try {
+			console.log('fetcing record with Id: ', id);
+			const res = await fetch(
+				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`
+			);
+			if (!res.ok) {
+				console.log('cant get data');
+				const err = await res.json();
+				setError(err.error || 'User not found');
+				setLoading(false);
+			} else {
+				const person = await res.json();
 
-					reset(initialData);
-					setLoading(false);
-				}
-			} catch (e) {
-				setError('Failed to fetch user.');
+				const initialData = {
+					nationalId: person.nationalId,
+					idType: person.idType,
+					firstName: person.firstName,
+					middleName: person.middleName,
+					lastName: person.lastName,
+					gender: person.gender,
+					birthday: person.birthday.split('T')[0],
+					spouseFullname: person.spouseFullname,
+					spousebirthday: person.spousebirthday.split('T')[0],
+					email: person.email,
+					telephone: person.telephone,
+					residence: person.residence,
+					underlying: person.underlying,
+					condition: person.condition,
+					declaration: person.declaration,
+					children: person.children.map((child) => ({
+						id: child.id, // Crucial: Keep the ID for existing children
+						fullName: child.fullName,
+						birthday: child.birthday.split('T')[0],
+					})),
+					parents: person.parents.map((parent) => ({
+						id: parent.id, // Crucial: Keep the ID for existing children
+						fullName: parent.fullName,
+						birthday: parent.birthday.split('T')[0],
+						relationship: parent.relationship,
+					})),
+				};
+
+				reset(initialData);
 				setLoading(false);
 			}
+		} catch (e) {
+			setError('Failed to fetch Member.');
+			setLoading(false);
+		} finally {
+			setLoading(false);
 		}
+	}
+
+	useEffect(() => {
 		fetchUser();
 	}, [id, reset]);
 
 	const onSubmit = async (data) => {
 		try {
-			//	await apiRequest(`posts/${id}`, 'PUT', data);
-			console.log('send  for update', id, data);
 			const response = await fetch(
 				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`,
 				{
 					method: 'PUT',
-					// headers: {
-					// 	'Content-Type': 'application/json',
-					// },
+					headers: {
+						'Content-Type': 'application/json',
+					},
 					body: JSON.stringify(data),
 				}
 			);
-			//const result = await res.data;
-			setOpen(true);
+
+			if (response.ok) {
+				setOpen(true);
+			}
 		} catch (error) {
 			console.error('Submission error:', error);
 			alert('Failed to submit member. Please try again.');
@@ -155,6 +161,27 @@ export default function EditMemeberDetailsPage() {
 			// reset();
 		}
 	};
+
+	if (loading) {
+		return (
+			<Box display='flex' justifyContent='center' mt={4}>
+				<CircularProgress />
+			</Box>
+		);
+	}
+
+	if (error) {
+		return (
+			<Box mt={4} textAlign='center'>
+				<Alert severity='error' sx={{ mb: 2 }}>
+					{error}
+				</Alert>
+				<Button variant='contained' onClick={fetchUser}>
+					Retry
+				</Button>
+			</Box>
+		);
+	}
 
 	return (
 		<form className='m-5 bg-white p-2' onSubmit={handleSubmit(onSubmit)}>
@@ -293,7 +320,7 @@ export default function EditMemeberDetailsPage() {
 								<label
 									htmlFor='birthday'
 									className='block text-sm/6 font-medium text-gray-500'>
-									Birthday
+									Birthday (mm-dd-yyyy)
 								</label>
 								<div className='mt-2'>
 									<input
@@ -412,7 +439,7 @@ export default function EditMemeberDetailsPage() {
 								<label
 									htmlFor='spouseFullname'
 									className='block text-sm/6 font-medium text-gray-500'>
-									spouseFullName
+									Spouse Full Name
 								</label>
 								<div className='mt-2'>
 									<input
@@ -433,7 +460,7 @@ export default function EditMemeberDetailsPage() {
 								<label
 									htmlFor='spousebirthday'
 									className='block text-sm/6 font-medium text-gray-500'>
-									Spouse Birthday
+									Spouse Birthday (mm-dd-yyyy)
 								</label>
 								<div className='mt-2'>
 									<input
@@ -495,7 +522,7 @@ export default function EditMemeberDetailsPage() {
 									<label
 										htmlFor={`children.${index}.birthday`}
 										className='block text-sm/6 font-medium text-gray-500'>
-										Birthday:
+										Birthday (mm-dd-yyyy):
 									</label>
 
 									<div className='mt-2'>
@@ -584,7 +611,7 @@ export default function EditMemeberDetailsPage() {
 									<label
 										htmlFor={`parents.${index}.birthday`}
 										className='block text-sm/6 font-medium text-gray-500'>
-										Birthday:
+										Birthday (mm-dd-yyyy):
 									</label>
 
 									<div className='mt-2'>
@@ -746,18 +773,18 @@ export default function EditMemeberDetailsPage() {
 									}
 								/>
 								{/* <label
-              htmlFor='declaration'
-              className='block text-sm/6 font-medium text-gray-500'
-            >
-              <input
-                className='mr-2 leading-tight'
-                type='checkbox'
-                name='declaration'
-                id='declaration'
-                {...register('declaration')}
-              />
-              I declare that the information given if accurate
-            </label> */}
+														htmlFor='declaration'
+														className='block text-sm/6 font-medium text-gray-500'
+												>
+														<input
+																className='mr-2 leading-tight'
+																type='checkbox'
+																name='declaration'
+																id='declaration'
+																{...register('declaration')}
+														/>
+														I declare that the information given if accurate
+												</label> */}
 							</div>
 						</div>
 					</section>
@@ -765,8 +792,8 @@ export default function EditMemeberDetailsPage() {
 			</div>
 			<div className='mt-6 flex items-center justify-end gap-x-6'>
 				{/* <button type='button' className='text-sm/6 font-semibold text-gray-500'>
-        Cancel
-      </button> */}
+								Cancel
+						</button> */}
 				<Button
 					variant='outlined'
 					color='error'

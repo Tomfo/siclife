@@ -1,8 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import EditIcon from '@mui/icons-material/Edit';
 import Link from 'next/link';
+import { useUserStore } from '@/app/store/userStore';
+
 import {
 	Typography,
 	Grid,
@@ -11,7 +13,10 @@ import {
 	Paper,
 	Chip,
 	Stack,
-	IconButton,CircularProgress,Alert,Button,
+	IconButton,
+	CircularProgress,
+	Alert,
+	Button,
 } from '@mui/material';
 
 // --- Section Title Component ---
@@ -84,69 +89,78 @@ function ArrayFieldDisplay({ label, items, renderItem }) {
  * @param {object} props.data - Member data to display (should match the member form fields)
  */
 
-
 export default function MemberViewPage() {
+	const router = useRouter();
+	const setUser = useUserStore((state) => state.setUser);
 	const params = useParams();
-	const { id, formType } = params;
-	const [user, setUser] = useState(null);
+	const { formType } = params;
+	const { id } = useUserStore((state) => state.user);
+	const [record, setRecord] = useState(null);
 	const [error, setError] = useState('');
 	const [loading, setLoading] = useState(true);
-async function fetchUser(params) {
-	
 
-			setLoading(true)
-			setError('');
-			try {
-				const res = await fetch(
-					`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`
-				);
-				if (!res.ok) {
-					const err = await res.json();
-					setError(err.error || 'Member not found');
-					setUser(null);
-				} else {
-					const data = await res.json();
-					setUser(data);
-				}
-			} catch (e) {
-				setError('Failed to fetch member.');
-				setUser(null);
-			}finally{
-				setLoading(false)
+	// Hanlde user Edit
+	const handleEditClick = (recordId) => {
+		//	router.push(`/members/${userId}/edit`);
+		const user = { id: recordId };
+		setUser(user); // Save user in Zustand
+		router.push('/members/edit/record'); // Navigate without query string
+	};
+
+	async function fetchUser(params) {
+		setLoading(true);
+		setError('');
+		try {
+			const res = await fetch(
+				`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members/${id}`
+			);
+			if (!res.ok) {
+				const err = await res.json();
+				setError(err.error || 'Member not found');
+				setRecord(null);
+			} else {
+				const data = await res.json();
+				setRecord(data);
 			}
+		} catch (e) {
+			setError('Failed to fetch member.');
+			setRecord(null);
+		} finally {
+			setLoading(false);
 		}
+	}
 	useEffect(() => {
-		
 		if (id) fetchUser();
 	}, [id]);
 
-		if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" mt={4}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+	if (loading) {
+		return (
+			<Box display='flex' justifyContent='center' mt={4}>
+				<CircularProgress />
+			</Box>
+		);
+	}
 
-  if (error) {
-    return (
-      <Box mt={4} textAlign="center">
-        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-        <Button variant="contained" onClick={fetchUser}>
-          Retry
-        </Button>
-      </Box>
-    );
-  }
+	if (error) {
+		return (
+			<Box mt={4} textAlign='center'>
+				<Alert severity='error' sx={{ mb: 2 }}>
+					{error}
+				</Alert>
+				<Button variant='contained' onClick={fetchUser}>
+					Retry
+				</Button>
+			</Box>
+		);
+	}
 
-  if (!user) {
-    return (
-      <Box mt={4} textAlign="center">
-        <Alert severity="info">Record not Found.</Alert>
-      </Box>
-    );
-  }
-
+	if (!record) {
+		return (
+			<Box mt={4} textAlign='center'>
+				<Alert severity='info'>Record not Found.</Alert>
+			</Box>
+		);
+	}
 
 	return (
 		<Box
@@ -165,57 +179,60 @@ async function fetchUser(params) {
 				<h1 className=' text-[#091b1b] font-bold justify-center text-2xl'>
 					REGISTRATION INFORMATION
 				</h1>
-				<Link href={`/members/${id}/edit`} passHref>
-					<IconButton
-						size='small'
-						sx={{
-							color: 'white',
-							bgcolor: '#060270', // Light gray from theme
-							'&:hover': {
-								bgcolor: 'green', // Light red from theme (if using custom palette)
-							},
-						}}
-						aria-label='Edit'>
-						<EditIcon />
-					</IconButton>
-				</Link>
+
+				<IconButton
+					onClick={() => handleEditClick(id)}
+					size='small'
+					sx={{
+						color: 'white',
+						bgcolor: '#060270', // Light gray from theme
+						'&:hover': {
+							bgcolor: 'green', // Light red from theme (if using custom palette)
+						},
+					}}
+					aria-label='Edit'>
+					<EditIcon />
+				</IconButton>
 			</div>
 			<SectionTitle>Identification Details</SectionTitle>
 			<Grid container spacing={2}>
-				<FieldDisplay label='National ID' value={user.nationalId} />
-				<FieldDisplay label='Type of ID' value={user.idType} />
+				<FieldDisplay label='National ID' value={record.nationalId} />
+				<FieldDisplay label='Type of ID' value={record.idType} />
 			</Grid>
 
 			{/* Personal Details */}
 			<SectionTitle>Personal Details</SectionTitle>
 			<Grid container spacing={2}>
-				<FieldDisplay label='First Name' value={user.firstName} />
-				<FieldDisplay label='Middle Name' value={user.middleName} />
-				<FieldDisplay label='Last Name' value={user.lastName} />
-				<FieldDisplay label='Birthday (yyyy-mm-dd)' value={user.birthday.split('T')[0]} />
-				<FieldDisplay label='Gender' value={user.gender} />
+				<FieldDisplay label='First Name' value={record.firstName} />
+				<FieldDisplay label='Middle Name' value={record.middleName} />
+				<FieldDisplay label='Last Name' value={record.lastName} />
+				<FieldDisplay
+					label='Birthday (yyyy-mm-dd)'
+					value={record.birthday.split('T')[0]}
+				/>
+				<FieldDisplay label='Gender' value={record.gender} />
 			</Grid>
 			{/* Contact Details */}
 			<SectionTitle>Contact Details</SectionTitle>
 			<Grid container spacing={2}>
-				<FieldDisplay label='Email' value={user.email} />
-				<FieldDisplay label='Telephone' value={user.telephone} />
-				<FieldDisplay label='Address' value={user.residence} />
+				<FieldDisplay label='Email' value={record.email} />
+				<FieldDisplay label='Telephone' value={record.telephone} />
+				<FieldDisplay label='Address' value={record.residence} />
 			</Grid>
 
 			{/* Spouse Details */}
 			<SectionTitle>Spouse Details</SectionTitle>
 			<Grid container spacing={2}>
-				<FieldDisplay label='Full Name' value={user.spouseFullname} />
+				<FieldDisplay label='Full Name' value={record.spouseFullname} />
 				<FieldDisplay
 					label='Birthday (yyyy-mm-dd)'
-					value={user.spousebirthday.split('T')[0]}
+					value={record.spousebirthday.split('T')[0]}
 				/>
 			</Grid>
 			{/* Children Details */}
 			<SectionTitle>Children Details</SectionTitle>
 			<ArrayFieldDisplay
-				items={user.children}
+				items={record.children}
 				renderItem={(child, idx) => (
 					<Grid container spacing={1}>
 						<FieldDisplay label='Full Name' value={child.fullName} />
@@ -230,7 +247,7 @@ async function fetchUser(params) {
 			{/* Parent Details */}
 			<SectionTitle>Parent Details</SectionTitle>
 			<ArrayFieldDisplay
-				items={user.parents}
+				items={record.parents}
 				renderItem={(parent, idx) => (
 					<Grid container spacing={1}>
 						<FieldDisplay label='Full Name' value={parent.fullName} />
@@ -249,16 +266,16 @@ async function fetchUser(params) {
 				<Typography variant='subtitle2' sx={{ fontStyle: 'italic' }}>
 					Ongoing illness/condition:{' '}
 					<Chip
-						label={user.underlying ? 'Yes' : 'No'}
-						color={user.underlying ? 'warning' : 'default'}
+						label={record.underlying ? 'Yes' : 'No'}
+						color={record.underlying ? 'warning' : 'default'}
 						size='small'
 						sx={{ ml: 1 }}
 					/>
 				</Typography>
-				{user.underlying && (
+				{record.underlying && (
 					<Typography variant='body2' sx={{ mt: 1 }}>
 						Known Health Conditions:{' '}
-						{user.condition || (
+						{record.condition || (
 							<span style={{ color: '#aaa' }}>None specified</span>
 						)}
 					</Typography>
@@ -268,8 +285,8 @@ async function fetchUser(params) {
 				<Typography variant='subtitle2' sx={{ fontStyle: 'italic' }}>
 					Declaration Accepted:{' '}
 					<Chip
-						label={user.declaration ? 'Yes' : 'No'}
-						color={user.declaration ? 'success' : 'default'}
+						label={record.declaration ? 'Yes' : 'No'}
+						color={record.declaration ? 'success' : 'default'}
 						size='small'
 						sx={{ ml: 1 }}
 					/>
