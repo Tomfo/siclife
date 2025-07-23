@@ -106,7 +106,15 @@ function StatusChip({ declaration }) {
 }
 
 // ActionButton component
-function ActionButton({ href, onClick, icon: Icon, color, label, as }) {
+function ActionButton({
+	href,
+	onClick,
+	icon: Icon,
+	color,
+
+	label,
+	as,
+}) {
 	const buttonProps = href ? { component: Link, href } : { onClick };
 
 	return (
@@ -125,7 +133,7 @@ function ActionButton({ href, onClick, icon: Icon, color, label, as }) {
 }
 
 export default function RegisteredMembersPage() {
-	
+	const [isDisabled, setIsDisabled] = useState(false);
 	const [users, setUsers] = useState([]);
 	const [filteredUsers, setFilteredUsers] = useState([]);
 	const [searchTerm, setSearchTerm] = useState('');
@@ -134,7 +142,10 @@ export default function RegisteredMembersPage() {
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	//from clerk
 	const { user } = useUser();
+	const role = user?.publicMetadata?.role;
+	const uniqueId = user?.publicMetadata?.uniqueId;
 	const isMobile = useMediaQuery('(max-width:640px)');
 	const primaryEmail = user?.primaryEmailAddress?.emailAddress;
 	const router = useRouter();
@@ -289,7 +300,7 @@ export default function RegisteredMembersPage() {
 				</div>
 				<div className='hidden md:flex'>
 					<h1 className='text-[#0a0b0b] font-bold text-md'>
-						REGISTERED MEMBERS
+						REGISTERED MEMBERS- {uniqueId}
 					</h1>
 				</div>
 			</div>
@@ -347,8 +358,12 @@ export default function RegisteredMembersPage() {
 
 								{/* Actions */}
 								<StyledTableCell>
-									{user.email === primaryEmail && (
-										<Box sx={{ display: 'flex', gap: 1 }}>
+									{(role === 'admin' || uniqueId === user.nationalId) && (
+										<Box
+											sx={{
+												display: 'flex',
+												gap: 1,
+											}}>
 											<ActionButton
 												onClick={() => handleViewClick(user.id)}
 												icon={PreviewRoundedIcon}

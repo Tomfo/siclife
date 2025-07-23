@@ -1,15 +1,13 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import EditIcon from '@mui/icons-material/Edit';
-import PrintIcon from '@mui/icons-material/Print';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import Link from 'next/link';
 import { useUserStore } from '@/app/store/userStore';
-import { useReactToPrint } from 'react-to-print';
+import jsPDF from 'jspdf';
+//import html2canvas from 'html2canvas';
 import html2canvas from 'html2canvas-pro';
-import { jsPDF } from 'jspdf';
-
 import {
 	Typography,
 	Grid,
@@ -22,7 +20,6 @@ import {
 	CircularProgress,
 	Alert,
 	Button,
-	Tooltip,
 } from '@mui/material';
 
 // --- Section Title Component ---
@@ -47,13 +44,11 @@ function SectionTitle({ children }) {
 function FieldDisplay({ label, value }) {
 	return (
 		<Grid size={{ xs: 12, sm: 6, md: 4 }}>
-			<Typography variant='subtitle2' color='text.secondary'>
-				{label}
-			</Typography>
+			<Typography variant='subtitle2'>{label}</Typography>
 			<Typography
 				variant='body1'
 				sx={{ fontWeight: 500, wordBreak: 'break-word' }}>
-				{value || <span style={{ color: '#aaa' }}>—</span>}
+				{value || <span>—</span>}
 			</Typography>
 		</Grid>
 	);
@@ -72,7 +67,7 @@ function ArrayFieldDisplay({ label, items, renderItem }) {
 							sx={{ p: 2, bgcolor: '#fafbfc' }}>
 							<Typography
 								variant='subtitle2'
-								color='text.secondary'
+								// color='text.secondary'
 								sx={{ mb: 1 }}>
 								{label} {items.length > 1 ? idx + 1 : ''}
 							</Typography>
@@ -90,6 +85,11 @@ function ArrayFieldDisplay({ label, items, renderItem }) {
 }
 
 // --- Main View Component ---
+/**
+ * @param {object} props
+ * @param {object} props.data - Member data to display (should match the member form fields)
+ */
+
 export default function MemberViewPage() {
 	const router = useRouter();
 	const setUser = useUserStore((state) => state.setUser);
@@ -99,68 +99,24 @@ export default function MemberViewPage() {
 	const [record, setRecord] = useState(null);
 	const [error, setError] = useState('');
 	const [loading, setLoading] = useState(true);
-	const componentRef = useRef();
 
-	// Handle user Edit
+	// Hanlde user Edit
 	const handleEditClick = (recordId) => {
+		//	router.push(`/members/${userId}/edit`);
 		const user = { id: recordId };
-		setUser(user);
-		router.push('/members/edit/record');
+		setUser(user); // Save user in Zustand
+		router.push('/members/edit/record'); // Navigate without query string
 	};
 
-	// Handle printing
-	const handlePrint = useReactToPrint({
-		content: () => componentRef.current,
-		pageStyle: `
-      @page {
-        size: A4;
-        margin: 10mm;
-      }
-      @media print {
-        body {
-          -webkit-print-color-adjust: exact;
-        }
-        .no-print {
-          display: none !important;
-        }
-      }
-    `,
-		documentTitle: `Member_Registration_${record?.nationalId || ''}`,
-	});
-
-	// Handle PDF generation
-	const handleGeneratePdf = async () => {
-		if (!componentRef.current) return;
-
-		try {
-			const canvas = await html2canvas(componentRef.current, {
-				scale: 2,
-				useCORS: true,
-				allowTaint: true,
-				letterRendering: true,
-				logging: true,
-			});
-
+	//download record
+	const downloadPDF = () => {
+		const input = document.getElementById('pdf-content');
+		html2canvas(input).then((canvas) => {
 			const imgData = canvas.toDataURL('image/png');
-			const pdf = new jsPDF('p', 'pt', 'a4');
-			const pageWidth = pdf.internal.pageSize.getWidth();
-			const pageHeight = pdf.internal.pageSize.getHeight();
-			//Fit image to pdf
-			const imgProps = pdf.getImageProperties(imgData);
-			const ratio = Math.min(
-				pageWidth / imgProps.width,
-				pageHeight / imgProps.height
-			);
-
-			const imgWidth = imgProps.width * ratio;
-			const imgHeight = imgProps.height * ratio;
-			pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-
-			pdf.save(`Member_Registration_${record?.nationalId || 'record'}.pdf`);
-		} catch (error) {
-			console.error('Error generating PDF:', error);
-			setError('Failed to generate PDF');
-		}
+			const pdf = new jsPDF();
+			pdf.addImage(imgData, 'PNG', 10, 10);
+			pdf.save('download.pdf');
+		});
 	};
 
 	async function fetchUser(params) {
@@ -185,7 +141,6 @@ export default function MemberViewPage() {
 			setLoading(false);
 		}
 	}
-
 	useEffect(() => {
 		if (id) fetchUser();
 	}, [id]);
@@ -220,48 +175,52 @@ export default function MemberViewPage() {
 	}
 
 	return (
-		<>
-			<Box
-				ref={componentRef}
-				sx={{
-					m: 2,
-					p: { xs: 1, sm: 3 },
-					bgcolor: 'background.paper',
-					borderRadius: 2,
-					boxShadow: 1,
-					width: '100%',
-					maxWidth: 900,
-					mx: 'auto',
-				}}>
-				{/* Print and PDF buttons (will be hidden when printing) */}
-				<Box
-					className='no-print'
-					sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-					<Tooltip title='Print'>
-						<IconButton onClick={handlePrint} color='primary'>
-							<PrintIcon />
-						</IconButton>
-					</Tooltip>
-					<Tooltip title='Download PDF'>
-						<IconButton onClick={handleGeneratePdf} color='error'>
-							<PictureAsPdfIcon />
-						</IconButton>
-					</Tooltip>
-					<Tooltip title='Edit details'>
-						<IconButton onClick={() => handleEditClick(id)} color='success'>
-							<EditIcon />
-						</IconButton>
-					</Tooltip>
-				</Box>
+		<Box
+			sx={{
+				m: 2,
+				p: { xs: 1, sm: 3 },
+				bgcolor: 'background.paper',
+				borderRadius: 2,
+				boxShadow: 1,
+				width: '100%',
+				maxWidth: 900,
+				mx: 'auto',
+			}}>
+			{/* Identification Details */}
+			<div className='max-w-7xl mx-auto px-4 py-2 flex items-center justify-between'>
+				<h1 className=' text-[#091b1b] font-bold justify-center text-2xl'>
+					REGISTRATION INFORMATION
+				</h1>
 
-				{/* Identification Details */}
-				<div className='max-w-7xl mx-auto px-4 py-2 flex items-center justify-between'>
-					<h1 className=' text-[#091b1b] font-bold justify-center text-2xl'>
-						REGISTRATION INFORMATION
-					</h1>
-				</div>
+				<IconButton
+					onClick={() => handleEditClick(id)}
+					size='small'
+					sx={{
+						color: 'white',
+						bgcolor: '#060270', // Light gray from theme
+						'&:hover': {
+							bgcolor: 'green', // Light red from theme (if using custom palette)
+						},
+					}}
+					aria-label='Edit'>
+					<EditIcon />
+				</IconButton>
+				<IconButton
+					onClick={() => downloadPDF()}
+					size='small'
+					sx={{
+						color: 'white',
+						bgcolor: '#ff3300', // Light gray from theme
+						'&:hover': {
+							bgcolor: 'green', // Light red from theme (if using custom palette)
+						},
+					}}
+					aria-label='Print'>
+					<PictureAsPdfIcon />
+				</IconButton>
+			</div>
 
-				{/* Rest of your content remains the same */}
+			<div id='pdf-content'>
 				<SectionTitle>Identification Details</SectionTitle>
 				<Grid container spacing={2}>
 					<FieldDisplay label='National ID' value={record.nationalId} />
@@ -280,7 +239,6 @@ export default function MemberViewPage() {
 					/>
 					<FieldDisplay label='Gender' value={record.gender} />
 				</Grid>
-
 				{/* Contact Details */}
 				<SectionTitle>Contact Details</SectionTitle>
 				<Grid container spacing={2}>
@@ -298,7 +256,6 @@ export default function MemberViewPage() {
 						value={record.spousebirthday.split('T')[0]}
 					/>
 				</Grid>
-
 				{/* Children Details */}
 				<SectionTitle>Children Details</SectionTitle>
 				<ArrayFieldDisplay
@@ -362,7 +319,7 @@ export default function MemberViewPage() {
 						/>
 					</Typography>
 				</Box>
-			</Box>
-		</>
+			</div>
+		</Box>
 	);
 }
