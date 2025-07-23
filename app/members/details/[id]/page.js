@@ -9,7 +9,7 @@ import { useUserStore } from '@/app/store/userStore';
 import { useReactToPrint } from 'react-to-print';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
-
+import Image from 'next/image';
 import {
 	Typography,
 	Grid,
@@ -129,38 +129,54 @@ export default function MemberViewPage() {
 	});
 
 	// Handle PDF generation
+	// const handleGeneratePdf = async () => {
+	// 	if (!componentRef.current) return;
+
+	// 	try {
+	// 		const canvas = await html2canvas(componentRef.current, {
+	// 			scale: 2,
+	// 			useCORS: true,
+	// 			allowTaint: true,
+	// 			logging: true,
+	// 		});
+
+	// 		const imgData = canvas.toDataURL('image/png');
+	// 		const pdf = new jsPDF('p', 'pt', 'a4');
+	// 		const pageWidth = pdf.internal.pageSize.getWidth();
+	// 		const pageHeight = pdf.internal.pageSize.getHeight();
+	// 		//Fit image to pdf
+	// 		const imgProps = pdf.getImageProperties(imgData);
+	// 		const ratio = Math.min(
+	// 			pageWidth / imgProps.width,
+	// 			pageHeight / imgProps.height
+	// 		);
+
+	// 		const imgWidth = imgProps.width * ratio;
+	// 		const imgHeight = imgProps.height * ratio;
+	// 		pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
+	// 		pdf.save(`Member_Registration_${record?.nationalId || 'record'}.pdf`);
+	// 	} catch (error) {
+	// 		console.error('Error generating PDF:', error);
+	// 		setError('Failed to generate PDF');
+	// 	}
+	// };
 	const handleGeneratePdf = async () => {
-		if (!componentRef.current) return;
+		const element = componentRef.current;
 
-		try {
-			const canvas = await html2canvas(componentRef.current, {
-				scale: 2,
-				useCORS: true,
-				allowTaint: true,
-				letterRendering: true,
-				logging: true,
-			});
+		if (!element) return;
 
-			const imgData = canvas.toDataURL('image/png');
-			const pdf = new jsPDF('p', 'pt', 'a4');
-			const pageWidth = pdf.internal.pageSize.getWidth();
-			const pageHeight = pdf.internal.pageSize.getHeight();
-			//Fit image to pdf
-			const imgProps = pdf.getImageProperties(imgData);
-			const ratio = Math.min(
-				pageWidth / imgProps.width,
-				pageHeight / imgProps.height
-			);
+		const canvas = await html2canvas(element, {
+			scale: 2, // improve quality
+			useCORS: true,
+			backgroundColor: null, // transparent background
+		});
 
-			const imgWidth = imgProps.width * ratio;
-			const imgHeight = imgProps.height * ratio;
-			pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+		const imgData = canvas.toDataURL('image/png');
+		const pdf = new jsPDF('p', 'px', [canvas.width, canvas.height]);
 
-			pdf.save(`Member_Registration_${record?.nationalId || 'record'}.pdf`);
-		} catch (error) {
-			console.error('Error generating PDF:', error);
-			setError('Failed to generate PDF');
-		}
+		pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+		pdf.save(`Member_Registration_${record?.nationalId || 'record'}.pdf`);
 	};
 
 	async function fetchUser(params) {
@@ -221,96 +237,154 @@ export default function MemberViewPage() {
 
 	return (
 		<>
+			{/* Print and PDF buttons (will be hidden when printing) */}
+			<Box
+				className='no-print'
+				sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
+				<Tooltip title='Edit details'>
+					<Button
+						onClick={() => handleEditClick(id)}
+						color='success'
+						variant='contained'>
+						<EditIcon />
+						Edit Details
+					</Button>
+				</Tooltip>
+				<Tooltip title='Download PDF'>
+					<Button onClick={handleGeneratePdf} color='error' variant='contained'>
+						<PictureAsPdfIcon />
+						Download Details
+					</Button>
+				</Tooltip>
+			</Box>
+
 			<Box
 				ref={componentRef}
 				sx={{
 					m: 2,
 					p: { xs: 1, sm: 3 },
 					bgcolor: 'background.paper',
-					borderRadius: 2,
-					boxShadow: 1,
-					width: '100%',
-					maxWidth: 900,
+
+					width: '800px',
 					mx: 'auto',
 				}}>
-				{/* Print and PDF buttons (will be hidden when printing) */}
-				<Box
-					className='no-print'
-					sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-					<Tooltip title='Print'>
-						<IconButton onClick={handlePrint} color='primary'>
-							<PrintIcon />
-						</IconButton>
-					</Tooltip>
-					<Tooltip title='Download PDF'>
-						<IconButton onClick={handleGeneratePdf} color='error'>
-							<PictureAsPdfIcon />
-						</IconButton>
-					</Tooltip>
-					<Tooltip title='Edit details'>
-						<IconButton onClick={() => handleEditClick(id)} color='success'>
-							<EditIcon />
-						</IconButton>
-					</Tooltip>
-				</Box>
-
-				{/* Identification Details */}
+				{/* Title */}
 				<div className='max-w-7xl mx-auto px-4 py-2 flex items-center justify-between'>
+					<Image
+						src='/moba.png'
+						alt='Logo'
+						width={36}
+						height={36}
+						className='rounded-full'
+						style={{ width: 36, height: 36 }}
+						unoptimized
+					/>
 					<h1 className=' text-[#091b1b] font-bold justify-center text-2xl'>
-						REGISTRATION INFORMATION
+						MOBA 86 SIC LIFE POLICY REGISTRATION INFORMATION
 					</h1>
 				</div>
 
-				{/* Rest of your content remains the same */}
+				{/* Identification Details */}
 				<SectionTitle>Identification Details</SectionTitle>
-				<Grid container spacing={2}>
-					<FieldDisplay label='National ID' value={record.nationalId} />
-					<FieldDisplay label='Type of ID' value={record.idType} />
-				</Grid>
+				<table style={{ width: '100%', marginBottom: '16px' }}>
+					<tbody>
+						<tr>
+							<td style={{ width: '50%', padding: '8px' }}>
+								<FieldDisplay label='National ID' value={record.nationalId} />
+							</td>
+							<td style={{ width: '50%', padding: '8px' }}>
+								<FieldDisplay label='Type of ID' value={record.idType} />
+							</td>
+						</tr>
+					</tbody>
+				</table>
 
 				{/* Personal Details */}
 				<SectionTitle>Personal Details</SectionTitle>
-				<Grid container spacing={2}>
-					<FieldDisplay label='First Name' value={record.firstName} />
-					<FieldDisplay label='Middle Name' value={record.middleName} />
-					<FieldDisplay label='Last Name' value={record.lastName} />
-					<FieldDisplay
-						label='Birthday (yyyy-mm-dd)'
-						value={record.birthday.split('T')[0]}
-					/>
-					<FieldDisplay label='Gender' value={record.gender} />
-				</Grid>
+				<table style={{ width: '100%', marginBottom: '16px' }}>
+					<tbody>
+						<tr>
+							<td style={{ width: '33%', padding: '8px' }}>
+								<FieldDisplay label='First Name' value={record.firstName} />
+							</td>
+							<td style={{ width: '33%', padding: '8px' }}>
+								<FieldDisplay label='Middle Name' value={record.middleName} />
+							</td>
+							<td style={{ width: '33%', padding: '8px' }}>
+								<FieldDisplay label='Last Name' value={record.lastName} />
+							</td>
+						</tr>
+						<tr>
+							<td style={{ padding: '8px' }}>
+								<FieldDisplay
+									label='Birthday (yyyy-mm-dd)'
+									value={record.birthday.split('T')[0]}
+								/>
+							</td>
+							<td style={{ padding: '8px' }}>
+								<FieldDisplay label='Gender' value={record.gender} />
+							</td>
+							<td style={{ padding: '8px' }}></td>
+						</tr>
+					</tbody>
+				</table>
 
 				{/* Contact Details */}
 				<SectionTitle>Contact Details</SectionTitle>
-				<Grid container spacing={2}>
-					<FieldDisplay label='Email' value={record.email} />
-					<FieldDisplay label='Telephone' value={record.telephone} />
-					<FieldDisplay label='Address' value={record.residence} />
-				</Grid>
+				<table style={{ width: '100%', marginBottom: '16px' }}>
+					<tbody>
+						<tr>
+							<td style={{ width: '33%', padding: '8px' }}>
+								<FieldDisplay label='Email' value={record.email} />
+							</td>
+							<td style={{ width: '33%', padding: '8px' }}>
+								<FieldDisplay label='Telephone' value={record.telephone} />
+							</td>
+							<td style={{ width: '33%', padding: '8px' }}>
+								<FieldDisplay label='Address' value={record.residence} />
+							</td>
+						</tr>
+					</tbody>
+				</table>
 
 				{/* Spouse Details */}
 				<SectionTitle>Spouse Details</SectionTitle>
-				<Grid container spacing={2}>
-					<FieldDisplay label='Full Name' value={record.spouseFullname} />
-					<FieldDisplay
-						label='Birthday (yyyy-mm-dd)'
-						value={record.spousebirthday.split('T')[0]}
-					/>
-				</Grid>
+				<table style={{ width: '100%', marginBottom: '16px' }}>
+					<tbody>
+						<tr>
+							<td style={{ width: '50%', padding: '8px' }}>
+								<FieldDisplay label='Full Name' value={record.spouseFullname} />
+							</td>
+							<td style={{ width: '50%', padding: '8px' }}>
+								<FieldDisplay
+									label='Birthday (yyyy-mm-dd)'
+									value={record.spousebirthday.split('T')[0]}
+								/>
+							</td>
+						</tr>
+					</tbody>
+				</table>
 
 				{/* Children Details */}
 				<SectionTitle>Children Details</SectionTitle>
 				<ArrayFieldDisplay
 					items={record.children}
 					renderItem={(child, idx) => (
-						<Grid container spacing={1}>
-							<FieldDisplay label='Full Name' value={child.fullName} />
-							<FieldDisplay
-								label='Birthday (yyyy-mm-dd)'
-								value={child.birthday.split('T')[0]}
-							/>
-						</Grid>
+						<table style={{ width: '100%', marginBottom: '8px' }}>
+							<tbody>
+								<tr>
+									<td style={{ width: '50%', padding: '8px' }}>
+										<FieldDisplay label='Full Name' value={child.fullName} />
+									</td>
+									<td style={{ width: '50%', padding: '8px' }}>
+										<FieldDisplay
+											label='Birthday (yyyy-mm-dd)'
+											value={child.birthday.split('T')[0]}
+										/>
+									</td>
+								</tr>
+							</tbody>
+						</table>
 					)}
 				/>
 
@@ -319,14 +393,27 @@ export default function MemberViewPage() {
 				<ArrayFieldDisplay
 					items={record.parents}
 					renderItem={(parent, idx) => (
-						<Grid container spacing={1}>
-							<FieldDisplay label='Full Name' value={parent.fullName} />
-							<FieldDisplay
-								label='Birthday (yyyy-mm-dd)'
-								value={parent.birthday.split('T')[0]}
-							/>
-							<FieldDisplay label='Relation' value={parent.relationship} />
-						</Grid>
+						<table style={{ width: '100%', marginBottom: '8px' }}>
+							<tbody>
+								<tr>
+									<td style={{ width: '40%', padding: '8px' }}>
+										<FieldDisplay label='Full Name' value={parent.fullName} />
+									</td>
+									<td style={{ width: '30%', padding: '8px' }}>
+										<FieldDisplay
+											label='Birthday (yyyy-mm-dd)'
+											value={parent.birthday.split('T')[0]}
+										/>
+									</td>
+									<td style={{ width: '30%', padding: '8px' }}>
+										<FieldDisplay
+											label='Relation'
+											value={parent.relationship}
+										/>
+									</td>
+								</tr>
+							</tbody>
+						</table>
 					)}
 				/>
 
