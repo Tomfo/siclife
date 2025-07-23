@@ -3,7 +3,11 @@ import prisma from '@/lib/prisma';
 export async function GET() {
 	console.log('fetching data from member GET route');
 	try {
-		const data = await prisma.person.findMany();
+		const data = await prisma.person.findMany({
+			orderBy: {
+				lastName: 'asc',
+			},
+		});
 		return Response.json(data);
 	} catch (error) {
 		return Response.json({ error: 'Failed to fetch members' }, { status: 500 });
