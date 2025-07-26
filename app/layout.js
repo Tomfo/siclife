@@ -7,7 +7,7 @@ import MainHeader from '@/components/MainHeader';
 import ResponsiveAppBar from '@/components/ResponsiveAppBar';
 import { ClerkProvider } from '@clerk/nextjs';
 import localFont from 'next/font/local';
-
+import ReactQueryProvider from './providers/ReactQueryProvider';
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
   variable: '--font-geist-sans',
@@ -35,7 +35,11 @@ export default function RootLayout({ children }) {
 
           {/* Main Content */}
           <main className='flex-1 container mx-auto px-4 py-8'>
-            <AppRouterCacheProvider>{children}</AppRouterCacheProvider>
+            <AppRouterCacheProvider>
+            <ReactQueryProvider>
+ {children}
+            </ReactQueryProvider>
+           </AppRouterCacheProvider>
           </main>
 
           {/* Footer */}

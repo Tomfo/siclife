@@ -1,6 +1,6 @@
-'use client';
-import RegistrationForm from '@/components/RegistrationForm';
+// 'use client';
+import RegistrationForm from "@/components/RegistrationForm";
 
 export default function MemberRegistrationForm() {
-	return <RegistrationForm />;
+  return <RegistrationForm />;
 }

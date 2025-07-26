@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma';
 
 export async function GET() {
-	console.log('fetching data from member GET route');
+
 	try {
 		const data = await prisma.person.findMany({
 			orderBy: {
