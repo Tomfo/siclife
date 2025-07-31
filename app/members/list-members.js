@@ -425,7 +425,7 @@ export default function ListMembers() {
 				<DialogContent>
 					<DialogContentText>
 						Are you sure you want to delete{' '}
-						<strong>{selectedUser?.name} </strong>? This action cannot be
+						<strong>{`${user.firstName} ${user.lastName}`} </strong>? This action cannot be
 						undone.
 					</DialogContentText>
 				</DialogContent>
