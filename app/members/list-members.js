@@ -189,11 +189,12 @@ export default function ListMembers() {
 	};
 
 	// Handle user deletion
-	const handleDeleteClick = (user) => {
-		setSelectedUser({
-			id: user.id,
-			name: `${user.firstName} ${user.lastName}`,
-		});
+	const handleDeleteClick = (selectUser) => {
+		// setSelectedUser({
+		// 	id: user.id,
+		// 	name: `${user.firstName} ${user.lastName}`,
+		// });
+		setSelectedUser(selectUser);
 		setConfirmDialogOpen(true);
 	};
 
@@ -337,7 +338,13 @@ export default function ListMembers() {
 													aria-label='delete'
 													color='error'
 													size='sm'
-													onClick={() => handleDeleteClick(user.id)}>
+													onClick={() =>
+														handleDeleteClick({
+															id: user.id,
+															firstName: user.firstName,
+															lastName: user.lastName,
+														})
+													}>
 													<DeleteIcon />
 												</IconButton>
 											</Box>
@@ -386,7 +393,13 @@ export default function ListMembers() {
 											</Tooltip>
 											<Tooltip title='delete'>
 												<ActionButton
-													onClick={() => handleDeleteClick(user)}
+													onClick={() =>
+														handleDeleteClick({
+															id: user.id,
+															firstName: user.firstName,
+															lastName: user.lastName,
+														})
+													}
 													icon={DeleteIcon}
 													color='#D20103'
 													label='Delete'
@@ -425,8 +438,10 @@ export default function ListMembers() {
 				<DialogContent>
 					<DialogContentText>
 						Are you sure you want to delete{' '}
-						<strong>{selectedUser?.name} </strong>? This action cannot be
-						undone.
+						<strong>
+							{`${selectedUser?.lastName} ${selectedUser?.firstName}`}{' '}
+						</strong>
+						? This action cannot be undone.
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
