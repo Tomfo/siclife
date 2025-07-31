@@ -150,7 +150,7 @@ export default function ListMembers() {
 	const { user } = useUser();
 	const role = user?.publicMetadata?.role;
 	const uniqueId = user?.publicMetadata?.uniqueId;
-	const isMobile = useMediaQuery('(max-width:640px)');
+	const isMobile = useMediaQuery('(max-width:640px)', { noSsr: true });
 	//const primaryEmail = user?.primaryEmailAddress?.emailAddress;
 	const router = useRouter();
 	const setUser = useUserStore((state) => state.setUser);
