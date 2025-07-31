@@ -419,7 +419,7 @@ export default function ListMembers() {
 				/>
 			</TableContainer>
 
-			{/* Confirm Delete Dialog */}
+			{/* Confirm Delete  */}
 			<Dialog open={confirmDialogOpen} onClose={handleCancelDelete}>
 				<DialogTitle>Confirm Deletion</DialogTitle>
 				<DialogContent>
@@ -432,7 +432,7 @@ export default function ListMembers() {
 				<DialogActions>
 					<Button onClick={handleCancelDelete}>Cancel</Button>
 					<Button color='error' onClick={handleConfirmDelete}>
-						Delete
+						Delete Record
 					</Button>
 				</DialogActions>
 			</Dialog>
