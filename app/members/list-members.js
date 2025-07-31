@@ -439,7 +439,7 @@ export default function ListMembers() {
 					<DialogContentText>
 						Are you sure you want to delete{' '}
 						<strong>
-							{`${selectedUser?.lastName} ${selectedUser?.firstName}`}{' '}
+							{`${selectedUser?.firstName} ${selectedUser?.lastName}`}{' '}
 						</strong>
 						? This action cannot be undone.
 					</DialogContentText>
