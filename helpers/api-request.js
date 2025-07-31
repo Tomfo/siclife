@@ -1,3 +1,4 @@
+//react query 
 export async function fetchMembers() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`,
