@@ -15,6 +15,9 @@ import SaveIcon from '@mui/icons-material/Save';
 import PersonIcon from '@mui/icons-material/Person';
 import ContactMailIcon from '@mui/icons-material/ContactMail';
 import BadgeIcon from '@mui/icons-material/Badge';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
 // MUI Components
 import {
@@ -28,16 +31,33 @@ import {
 	IconButton,
 	Snackbar,
 	Alert,
-	Divider,
 	Checkbox,
 	FormControlLabel,
 	FormHelperText,
 	Stack,
 	CircularProgress,
-	InputAdornment,
+	Stepper,
+	Step,
+	StepLabel,
+	StepContent,
+	Container,
+	Card,
+	CardContent,
+	Avatar,
+	Divider,
 } from '@mui/material';
 
+// Define steps for the stepper
+const STEPS = [
+	{ label: 'Identity', description: 'National ID & Type' },
+	{ label: 'Personal', description: 'Name, DOB & Gender' },
+	{ label: 'Contact', description: 'Address & Contact Info' },
+	{ label: 'Family', description: 'Spouse, Children & Parents' },
+	{ label: 'Review', description: 'Declaration & Submission' },
+];
+
 export default function RegistrationForm() {
+	const [activeStep, setActiveStep] = useState(0);
 	const [openSnackbar, setOpenSnackbar] = useState(false);
 	const router = useRouter();
 
@@ -49,40 +69,28 @@ export default function RegistrationForm() {
 		control,
 		register,
 		handleSubmit,
+		trigger,
 		reset,
 		formState: { errors, isSubmitting },
 	} = useForm({
 		defaultValues: memberDefaultValues,
 		resolver: yupResolver(memberSchema),
-		mode: 'onBlur', // Validates when user leaves the field
+		mode: 'onChange',
 	});
 
 	const {
 		fields: childFields,
 		append: appendChild,
 		remove: removeChild,
-	} = useFieldArray({
-		control,
-		name: 'children',
-	});
+	} = useFieldArray({ control, name: 'children' });
 
 	const {
 		fields: parentFields,
 		append: appendParent,
 		remove: removeParent,
-	} = useFieldArray({
-		control,
-		name: 'parents',
-	});
+	} = useFieldArray({ control, name: 'parents' });
 
-	const handleClose = (event, reason) => {
-		if (reason === 'clickaway') return;
-		setOpenSnackbar(false);
-		if (reason !== 'timeout') {
-			router.push('/members');
-		}
-	};
-
+	// Mutation
 	const createMemberMutation = useMutation({
 		mutationFn: (newMember) =>
 			fetch(`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`, {
@@ -92,532 +100,626 @@ export default function RegistrationForm() {
 			}).then((res) => res.json()),
 		onSuccess: () => {
 			setOpenSnackbar(true);
-			reset(); // Optional: clear form on success
+			reset();
 		},
 	});
+
+	const handleCloseSnackbar = (event, reason) => {
+		if (reason === 'clickaway') return;
+		setOpenSnackbar(false);
+		router.push('/members');
+	};
 
 	const onSubmit = (formData) => {
 		createMemberMutation.mutate(formData);
 	};
 
-	// Helper to render section headers
-	const SectionHeader = ({ title, icon }) => (
-		<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, mt: 1 }}>
-			{icon}
-			<Typography variant='h6' color='primary.main' fontWeight='600'>
-				{title}
-			</Typography>
+	// --- Navigation Logic ---
+
+	const handleNext = async () => {
+		// Define fields to validate per step
+		let fieldsToValidate = [];
+
+		switch (activeStep) {
+			case 0:
+				fieldsToValidate = ['nationalId', 'idType'];
+				break;
+			case 1:
+				fieldsToValidate = [
+					'firstName',
+					'lastName',
+					'middleName',
+					'birthday',
+					'gender',
+				];
+				break;
+			case 2:
+				fieldsToValidate = ['email', 'telephone', 'residence'];
+				break;
+			case 3:
+				fieldsToValidate = [
+					'spouseFullname',
+					'spousebirthday',
+					'children',
+					'parents',
+				];
+				break;
+			case 4:
+				fieldsToValidate = ['declaration', 'condition'];
+				break;
+			default:
+				break;
+		}
+
+		const isStepValid = await trigger(fieldsToValidate);
+		if (isStepValid) {
+			setActiveStep((prev) => prev + 1);
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+	};
+
+	const handleBack = () => {
+		setActiveStep((prev) => prev - 1);
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	};
+
+	// --- UI Sub-Components ---
+
+	const FormSection = ({ children, title, icon }) => (
+		<Box sx={{ animation: 'fadeIn 0.5s' }}>
+			<Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+				<Avatar sx={{ bgcolor: 'primary.light', color: 'primary.main' }}>
+					{icon}
+				</Avatar>
+				<Typography variant='h5' fontWeight='600' color='text.primary'>
+					{title}
+				</Typography>
+			</Box>
+			{children}
 		</Box>
 	);
 
 	return (
-		<Box
-			sx={{
-				minHeight: '100vh',
-				bgcolor: 'grey.50',
-				py: 4,
-				px: { xs: 2, md: 0 },
-			}}>
-			<Paper
-				component='form'
-				onSubmit={handleSubmit(onSubmit)}
-				elevation={2}
-				sx={{
-					maxWidth: '1000px',
-					margin: '0 auto',
-					p: { xs: 3, md: 5 },
-					borderRadius: 3,
-				}}>
+		<Box sx={{ minHeight: '100vh', bgcolor: '#f4f6f8', py: 4 }}>
+			<Container maxWidth='md'>
 				{/* Header */}
-				<Box sx={{ textAlign: 'center', mb: 5 }}>
+				<Box sx={{ textAlign: 'center', mb: 4 }}>
 					<Typography
 						variant='h4'
-						component='h1'
-						fontWeight='bold'
-						color='primary'
+						fontWeight='800'
+						color='primary.main'
 						gutterBottom>
-						Insurance Policy Registration
+						Insurance Registration
 					</Typography>
-					<Typography variant='body1' color='text.secondary'>
-						Please fill out the details below to register a new member.
+					<Typography variant='subtitle1' color='text.secondary'>
+						Complete the steps below to register a new policy member.
 					</Typography>
 				</Box>
 
-				<Snackbar
-					open={openSnackbar}
-					autoHideDuration={2500}
-					onClose={handleClose}
-					anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-					<Alert
-						onClose={handleClose}
-						severity='success'
-						variant='filled'
-						sx={{ width: '100%' }}>
-						Record created successfully! Redirecting...
-					</Alert>
-				</Snackbar>
-
-				{/* 1. Identification Details */}
-				<SectionHeader
-					title='Identification'
-					icon={<BadgeIcon color='primary' />}
-				/>
-				<Grid container spacing={3} sx={{ mb: 4 }}>
-					<Grid item xs={12} sm={6}>
-						<TextField
-							fullWidth
-							label='National ID'
-							placeholder='Enter ID Number'
-							{...register('nationalId')}
-							error={!!errors.nationalId}
-							helperText={errors.nationalId?.message}
-						/>
-					</Grid>
-					<Grid item xs={12} sm={6}>
-						<TextField
-							select
-							fullWidth
-							label='Type of Identification'
-							defaultValue=''
-							{...register('idType')}
-							error={!!errors.idType}
-							helperText={errors.idType?.message}>
-							<MenuItem value='GhCard'>Ghana Card</MenuItem>
-							<MenuItem value='Passport'>Passport</MenuItem>
-						</TextField>
-					</Grid>
-				</Grid>
-
-				<Divider sx={{ my: 3 }} />
-
-				{/* 2. Personal Details */}
-				<SectionHeader
-					title='Personal Details'
-					icon={<PersonIcon color='primary' />}
-				/>
-				<Grid container spacing={3} sx={{ mb: 4 }}>
-					<Grid item xs={12} sm={4}>
-						<TextField
-							fullWidth
-							label='First Name'
-							{...register('firstName')}
-							error={!!errors.firstName}
-							helperText={errors.firstName?.message}
-						/>
-					</Grid>
-					<Grid item xs={12} sm={4}>
-						<TextField
-							fullWidth
-							label='Middle Name'
-							{...register('middleName')}
-							error={!!errors.middleName}
-							helperText={errors.middleName?.message}
-						/>
-					</Grid>
-					<Grid item xs={12} sm={4}>
-						<TextField
-							fullWidth
-							label='Last Name'
-							{...register('lastName')}
-							error={!!errors.lastName}
-							helperText={errors.lastName?.message}
-						/>
-					</Grid>
-					<Grid item xs={12} sm={6}>
-						<TextField
-							fullWidth
-							type='date'
-							label='Date of Birth'
-							InputLabelProps={{ shrink: true }}
-							{...register('birthday')}
-							error={!!errors.birthday}
-							helperText={errors.birthday?.message}
-						/>
-					</Grid>
-					<Grid item xs={12} sm={6}>
-						<TextField
-							select
-							fullWidth
-							label='Gender'
-							defaultValue=''
-							{...register('gender')}
-							error={!!errors.gender}
-							helperText={errors.gender?.message}>
-							<MenuItem value='Male'>Male</MenuItem>
-							<MenuItem value='Female'>Female</MenuItem>
-						</TextField>
-					</Grid>
-				</Grid>
-
-				<Divider sx={{ my: 3 }} />
-
-				{/* 3. Contact Details */}
-				<SectionHeader
-					title='Contact Details'
-					icon={<ContactMailIcon color='primary' />}
-				/>
-				<Grid container spacing={3} sx={{ mb: 4 }}>
-					<Grid item xs={12} sm={6}>
-						<TextField
-							fullWidth
-							type='email'
-							label='Email Address'
-							{...register('email')}
-							error={!!errors.email}
-							helperText={errors.email?.message}
-						/>
-					</Grid>
-					<Grid item xs={12} sm={6}>
-						<TextField
-							fullWidth
-							type='tel'
-							label='Telephone'
-							{...register('telephone')}
-							error={!!errors.telephone}
-							helperText={errors.telephone?.message}
-						/>
-					</Grid>
-					<Grid item xs={12}>
-						<TextField
-							fullWidth
-							label='Residential Address'
-							{...register('residence')}
-							error={!!errors.residence}
-							helperText={errors.residence?.message}
-						/>
-					</Grid>
-				</Grid>
-
-				<Divider sx={{ my: 3 }} />
-
-				{/* 4. Spouse Details */}
-				<SectionHeader
-					title='Spouse Details'
-					icon={<FamilyRestroomIcon color='primary' />}
-				/>
-				<Grid container spacing={3} sx={{ mb: 4 }}>
-					<Grid item xs={12} sm={6}>
-						<TextField
-							fullWidth
-							label='Spouse Full Name'
-							{...register('spouseFullname')}
-							error={!!errors.spouseFullname}
-							helperText={errors.spouseFullname?.message}
-						/>
-					</Grid>
-					<Grid item xs={12} sm={6}>
-						<TextField
-							fullWidth
-							type='date'
-							label='Spouse Birthday'
-							InputLabelProps={{ shrink: true }}
-							{...register('spousebirthday')}
-							error={!!errors.spousebirthday}
-							helperText={errors.spousebirthday?.message}
-						/>
-					</Grid>
-				</Grid>
-
-				<Divider sx={{ my: 3 }} />
-
-				{/* 5. Children Details */}
-				<Box sx={{ mb: 4 }}>
-					<Box
-						sx={{
-							display: 'flex',
-							justifyContent: 'space-between',
-							alignItems: 'center',
-							mb: 2,
-						}}>
-						<SectionHeader
-							title='Children Details'
-							icon={<EscalatorWarningIcon color='primary' />}
-						/>
-						<Button
-							variant='contained'
-							size='small'
-							onClick={() => appendChild({ fullName: '', birthday: '' })}
-							disabled={childFields.length >= MAX_DEPENDANTS}
-							startIcon={<EscalatorWarningIcon />}>
-							Add Child
-						</Button>
-					</Box>
-
-					{childFields.length === 0 && (
-						<Typography
-							variant='body2'
-							color='text.secondary'
-							sx={{ fontStyle: 'italic', ml: 4 }}>
-							No children added.
-						</Typography>
-					)}
-
-					<Stack spacing={2}>
-						{childFields.map((field, index) => (
-							<Paper
-								key={field.id}
-								variant='outlined'
-								sx={{ p: 2, bgcolor: 'grey.50', position: 'relative' }}>
-								<Box sx={{ position: 'absolute', top: 8, right: 8 }}>
-									<IconButton
-										size='small'
-										color='error'
-										onClick={() => removeChild(index)}
-										aria-label='remove child'>
-										<DeleteIcon fontSize='small' />
-									</IconButton>
-								</Box>
-								<Grid container spacing={2} alignItems='flex-start'>
-									<Grid item xs={12} sm={6}>
-										<TextField
-											fullWidth
-											size='small'
-											label={`Child ${index + 1} Full Name`}
-											{...register(`children.${index}.fullName`)}
-											error={!!errors.children?.[index]?.fullName}
-											helperText={
-												errors.children?.[index]?.fullName
-													? 'Full name is required'
-													: ''
-											}
-										/>
-									</Grid>
-									<Grid item xs={12} sm={5}>
-										<TextField
-											fullWidth
-											size='small'
-											type='date'
-											label='Birthday'
-											InputLabelProps={{ shrink: true }}
-											{...register(`children.${index}.birthday`)}
-											error={!!errors.children?.[index]?.birthday}
-											helperText={
-												errors.children?.[index]?.birthday
-													? 'Birthday is required'
-													: ''
-											}
-										/>
-									</Grid>
-								</Grid>
-							</Paper>
-						))}
-					</Stack>
-				</Box>
-
-				<Divider sx={{ my: 3 }} />
-
-				{/* 6. Parent Details */}
-				<Box sx={{ mb: 4 }}>
-					<Box
-						sx={{
-							display: 'flex',
-							justifyContent: 'space-between',
-							alignItems: 'center',
-							mb: 2,
-						}}>
-						<SectionHeader
-							title='Parent Details'
-							icon={<FamilyRestroomIcon color='primary' />}
-						/>
-						<Button
-							variant='contained'
-							color='secondary'
-							size='small'
-							onClick={() =>
-								appendParent({ fullName: '', birthday: '', relationship: '' })
-							}
-							disabled={parentFields.length >= MAX_PARENTS}
-							startIcon={<FamilyRestroomIcon />}>
-							Add Parent
-						</Button>
-					</Box>
-
-					{parentFields.length === 0 && (
-						<Typography
-							variant='body2'
-							color='text.secondary'
-							sx={{ fontStyle: 'italic', ml: 4 }}>
-							No parents added.
-						</Typography>
-					)}
-
-					<Stack spacing={2}>
-						{parentFields.map((field, index) => (
-							<Paper
-								key={field.id}
-								variant='outlined'
-								sx={{ p: 2, bgcolor: 'grey.50', position: 'relative' }}>
-								<Box sx={{ position: 'absolute', top: 8, right: 8 }}>
-									<IconButton
-										size='small'
-										color='error'
-										onClick={() => removeParent(index)}
-										aria-label='remove parent'>
-										<DeleteIcon fontSize='small' />
-									</IconButton>
-								</Box>
-								<Grid container spacing={2}>
-									<Grid item xs={12} sm={5}>
-										<TextField
-											fullWidth
-											size='small'
-											label={`Parent ${index + 1} Full Name`}
-											{...register(`parents.${index}.fullName`)}
-											error={!!errors.parents?.[index]?.fullName}
-											helperText={
-												errors.parents?.[index]?.fullName ? 'Required' : ''
-											}
-										/>
-									</Grid>
-									<Grid item xs={12} sm={3}>
-										<TextField
-											fullWidth
-											size='small'
-											type='date'
-											label='Birthday'
-											InputLabelProps={{ shrink: true }}
-											{...register(`parents.${index}.birthday`)}
-											error={!!errors.parents?.[index]?.birthday}
-											helperText={
-												errors.parents?.[index]?.birthday ? 'Required' : ''
-											}
-										/>
-									</Grid>
-									<Grid item xs={12} sm={3}>
-										<TextField
-											select
-											fullWidth
-											size='small'
-											label='Relation'
-											defaultValue=''
-											{...register(`parents.${index}.relationship`)}
-											error={!!errors.parents?.[index]?.relationship}
-											helperText={
-												errors.parents?.[index]?.relationship ? 'Required' : ''
-											}>
-											<MenuItem value='Father'>Father</MenuItem>
-											<MenuItem value='Mother'>Mother</MenuItem>
-											<MenuItem value='Inlaw'>In-law</MenuItem>
-										</TextField>
-									</Grid>
-								</Grid>
-							</Paper>
-						))}
-					</Stack>
-				</Box>
-
-				<Divider sx={{ my: 3 }} />
-
-				{/* 7. Undertaking */}
-				<Box
+				{/* Stepper (Hidden on very small screens, visible on sm+) */}
+				<Paper
 					sx={{
+						p: 3,
 						mb: 4,
-						p: 2,
-						bgcolor: 'warning.50',
+						display: { xs: 'none', sm: 'block' },
 						borderRadius: 2,
-						border: '1px solid',
-						borderColor: 'warning.100',
-					}}>
-					<Typography variant='h6' gutterBottom color='warning.main'>
-						Undertaking & Declaration
-					</Typography>
+					}}
+					elevation={1}>
+					<Stepper activeStep={activeStep} alternativeLabel>
+						{STEPS.map((step) => (
+							<Step key={step.label}>
+								<StepLabel>{step.label}</StepLabel>
+							</Step>
+						))}
+					</Stepper>
+				</Paper>
 
-					<Controller
-						name='underlying'
-						control={control}
-						render={({ field }) => (
-							<FormControlLabel
-								control={
-									<Checkbox
-										{...field}
-										checked={!!field.value}
-										color='warning'
-									/>
-								}
-								label={
-									<Typography variant='body2'>
-										Do you or your relatives listed have any ongoing illness or
-										condition?
+				{/* Main Form Card */}
+				<Card elevation={3} sx={{ borderRadius: 3, overflow: 'visible' }}>
+					<CardContent sx={{ p: { xs: 2, md: 5 } }}>
+						<form onSubmit={handleSubmit(onSubmit)}>
+							{/* STEP 0: IDENTIFICATION */}
+							{activeStep === 0 && (
+								<FormSection title='Identification' icon={<BadgeIcon />}>
+									<Grid container spacing={3}>
+										<Grid item xs={12} md={6}>
+											<TextField
+												fullWidth
+												label='National ID'
+												placeholder='e.g. GHA-123456789-0'
+												{...register('nationalId')}
+												error={!!errors.nationalId}
+												helperText={errors.nationalId?.message}
+												InputProps={{ sx: { borderRadius: 2 } }}
+											/>
+										</Grid>
+										<Grid item xs={12} md={6}>
+											<TextField
+												select
+												fullWidth
+												label='ID Type'
+												defaultValue='GhCard'
+												{...register('idType')}
+												error={!!errors.idType}
+												helperText={errors.idType?.message}
+												InputProps={{ sx: { borderRadius: 2 } }}>
+												<MenuItem value='GhCard'>Ghana Card</MenuItem>
+												<MenuItem value='Passport'>Passport</MenuItem>
+											</TextField>
+										</Grid>
+									</Grid>
+								</FormSection>
+							)}
+
+							{/* STEP 1: PERSONAL */}
+							{activeStep === 1 && (
+								<FormSection title='Personal Information' icon={<PersonIcon />}>
+									<Grid container spacing={3}>
+										<Grid item xs={12} md={4}>
+											<TextField
+												fullWidth
+												label='First Name'
+												{...register('firstName')}
+												error={!!errors.firstName}
+												helperText={errors.firstName?.message}
+											/>
+										</Grid>
+										<Grid item xs={12} md={4}>
+											<TextField
+												fullWidth
+												label='Middle Name'
+												{...register('middleName')}
+												error={!!errors.middleName}
+												helperText={errors.middleName?.message}
+											/>
+										</Grid>
+										<Grid item xs={12} md={4}>
+											<TextField
+												fullWidth
+												label='Last Name'
+												{...register('lastName')}
+												error={!!errors.lastName}
+												helperText={errors.lastName?.message}
+											/>
+										</Grid>
+										<Grid item xs={12} md={6}>
+											<TextField
+												fullWidth
+												type='date'
+												label='Date of Birth'
+												InputLabelProps={{ shrink: true }}
+												{...register('birthday')}
+												error={!!errors.birthday}
+												helperText={errors.birthday?.message}
+											/>
+										</Grid>
+										<Grid item xs={12} md={6}>
+											<TextField
+												select
+												fullWidth
+												label='Gender'
+												defaultValue='Male'
+												{...register('gender')}
+												error={!!errors.gender}
+												helperText={errors.gender?.message}>
+												<MenuItem value='Male'>Male</MenuItem>
+												<MenuItem value='Female'>Female</MenuItem>
+											</TextField>
+										</Grid>
+									</Grid>
+								</FormSection>
+							)}
+
+							{/* STEP 2: CONTACT */}
+							{activeStep === 2 && (
+								<FormSection title='Contact Details' icon={<ContactMailIcon />}>
+									<Grid container spacing={3}>
+										<Grid item xs={12} md={6}>
+											<TextField
+												fullWidth
+												type='email'
+												label='Email Address'
+												{...register('email')}
+												error={!!errors.email}
+												helperText={errors.email?.message}
+											/>
+										</Grid>
+										<Grid item xs={12} md={6}>
+											<TextField
+												fullWidth
+												type='tel'
+												label='Telephone'
+												{...register('telephone')}
+												error={!!errors.telephone}
+												helperText={errors.telephone?.message}
+											/>
+										</Grid>
+										<Grid item xs={12}>
+											<TextField
+												fullWidth
+												multiline
+												rows={2}
+												label='Residential Address'
+												{...register('residence')}
+												error={!!errors.residence}
+												helperText={errors.residence?.message}
+											/>
+										</Grid>
+									</Grid>
+								</FormSection>
+							)}
+
+							{/* STEP 3: FAMILY */}
+							{activeStep === 3 && (
+								<FormSection
+									title='Family & Dependants'
+									icon={<FamilyRestroomIcon />}>
+									{/* Spouse */}
+									<Typography
+										variant='subtitle2'
+										sx={{
+											color: 'text.secondary',
+											mb: 2,
+											mt: 1,
+											textTransform: 'uppercase',
+											letterSpacing: 1,
+										}}>
+										Spouse Details
 									</Typography>
-								}
-							/>
-						)}
-					/>
+									<Grid container spacing={3} sx={{ mb: 4 }}>
+										<Grid item xs={12} md={6}>
+											<TextField
+												fullWidth
+												label='Spouse Full Name'
+												{...register('spouseFullname')}
+												error={!!errors.spouseFullname}
+												helperText={errors.spouseFullname?.message}
+											/>
+										</Grid>
+										<Grid item xs={12} md={6}>
+											<TextField
+												fullWidth
+												type='date'
+												label='Spouse Birthday'
+												InputLabelProps={{ shrink: true }}
+												{...register('spousebirthday')}
+												error={!!errors.spousebirthday}
+												helperText={errors.spousebirthday?.message}
+											/>
+										</Grid>
+									</Grid>
 
-					<TextField
-						fullWidth
-						multiline
-						rows={3}
-						label='Known Health Conditions (If any)'
-						placeholder='Please describe details here...'
-						sx={{ mt: 2, mb: 2, bgcolor: 'background.paper' }}
-						{...register('condition')}
-						error={!!errors.condition}
-						helperText={errors.condition?.message}
-					/>
+									<Divider sx={{ my: 3 }} />
 
-					<Controller
-						name='declaration'
-						control={control}
-						render={({ field }) => (
-							<FormControlLabel
-								control={
-									<Checkbox
-										{...field}
-										checked={!!field.value}
+									{/* Children */}
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'space-between',
+											alignItems: 'center',
+											mb: 2,
+										}}>
+										<Typography
+											variant='subtitle2'
+											sx={{
+												color: 'text.secondary',
+												textTransform: 'uppercase',
+												letterSpacing: 1,
+											}}>
+											Children ({childFields.length}/{MAX_DEPENDANTS})
+										</Typography>
+										<Button
+											size='small'
+											startIcon={<AddCircleOutlineIcon />}
+											onClick={() =>
+												appendChild({ fullName: '', birthday: '' })
+											}
+											disabled={childFields.length >= MAX_DEPENDANTS}>
+											Add Child
+										</Button>
+									</Box>
+
+									<Stack spacing={2} sx={{ mb: 4 }}>
+										{childFields.map((field, index) => (
+											<Paper
+												key={field.id}
+												variant='outlined'
+												sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+												<Grid container spacing={2} alignItems='center'>
+													<Grid item xs={12} sm={6}>
+														<TextField
+															size='small'
+															fullWidth
+															label='Child Full Name'
+															{...register(`children.${index}.fullName`)}
+															error={!!errors.children?.[index]?.fullName}
+														/>
+													</Grid>
+													<Grid item xs={10} sm={5}>
+														<TextField
+															size='small'
+															fullWidth
+															type='date'
+															label='Birthday'
+															InputLabelProps={{ shrink: true }}
+															{...register(`children.${index}.birthday`)}
+															error={!!errors.children?.[index]?.birthday}
+														/>
+													</Grid>
+													<Grid
+														item
+														xs={2}
+														sm={1}
+														sx={{
+															display: 'flex',
+															justifyContent: 'flex-end',
+														}}>
+														<IconButton
+															size='small'
+															color='error'
+															onClick={() => removeChild(index)}>
+															<DeleteIcon />
+														</IconButton>
+													</Grid>
+												</Grid>
+											</Paper>
+										))}
+										{childFields.length === 0 && (
+											<Typography variant='caption' color='text.disabled'>
+												No children added yet.
+											</Typography>
+										)}
+									</Stack>
+
+									<Divider sx={{ my: 3 }} />
+
+									{/* Parents */}
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'space-between',
+											alignItems: 'center',
+											mb: 2,
+										}}>
+										<Typography
+											variant='subtitle2'
+											sx={{
+												color: 'text.secondary',
+												textTransform: 'uppercase',
+												letterSpacing: 1,
+											}}>
+											Parents ({parentFields.length}/{MAX_PARENTS})
+										</Typography>
+										<Button
+											size='small'
+											color='secondary'
+											startIcon={<AddCircleOutlineIcon />}
+											onClick={() =>
+												appendParent({
+													fullName: '',
+													birthday: '',
+													relationship: '',
+												})
+											}
+											disabled={parentFields.length >= MAX_PARENTS}>
+											Add Parent
+										</Button>
+									</Box>
+
+									<Stack spacing={2}>
+										{parentFields.map((field, index) => (
+											<Paper
+												key={field.id}
+												variant='outlined'
+												sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+												<Grid container spacing={2} alignItems='center'>
+													<Grid item xs={12} sm={5}>
+														<TextField
+															size='small'
+															fullWidth
+															label='Parent Name'
+															{...register(`parents.${index}.fullName`)}
+															error={!!errors.parents?.[index]?.fullName}
+														/>
+													</Grid>
+													<Grid item xs={6} sm={3}>
+														<TextField
+															size='small'
+															select
+															fullWidth
+															label='Relation'
+															defaultValue='Father'
+															{...register(`parents.${index}.relationship`)}
+															error={!!errors.parents?.[index]?.relationship}>
+															<MenuItem value='Father'>Father</MenuItem>
+															<MenuItem value='Mother'>Mother</MenuItem>
+															<MenuItem value='Inlaw'>In-law</MenuItem>
+														</TextField>
+													</Grid>
+													<Grid item xs={6} sm={3}>
+														<TextField
+															size='small'
+															fullWidth
+															type='date'
+															label='Birthday'
+															InputLabelProps={{ shrink: true }}
+															{...register(`parents.${index}.birthday`)}
+															error={!!errors.parents?.[index]?.birthday}
+														/>
+													</Grid>
+													<Grid
+														item
+														xs={12}
+														sm={1}
+														sx={{
+															display: 'flex',
+															justifyContent: 'flex-end',
+														}}>
+														<IconButton
+															size='small'
+															color='error'
+															onClick={() => removeParent(index)}>
+															<DeleteIcon />
+														</IconButton>
+													</Grid>
+												</Grid>
+											</Paper>
+										))}
+										{parentFields.length === 0 && (
+											<Typography variant='caption' color='text.disabled'>
+												No parents added yet.
+											</Typography>
+										)}
+									</Stack>
+								</FormSection>
+							)}
+
+							{/* STEP 4: REVIEW & SUBMIT */}
+							{activeStep === 4 && (
+								<FormSection title='Review & Declaration' icon={<SaveIcon />}>
+									<Alert severity='info' sx={{ mb: 3 }}>
+										Please review the information provided in previous steps
+										before submitting.
+									</Alert>
+
+									<Box
+										sx={{
+											p: 3,
+											bgcolor: 'warning.50',
+											borderRadius: 2,
+											border: '1px dashed',
+											borderColor: 'warning.main',
+										}}>
+										<Typography variant='h6' gutterBottom color='warning.dark'>
+											Medical Undertaking
+										</Typography>
+
+										<Controller
+											name='underlying'
+											control={control}
+											render={({ field }) => (
+												<FormControlLabel
+													control={
+														<Checkbox
+															{...field}
+															checked={!!field.value}
+															color='warning'
+														/>
+													}
+													label={
+														<Typography variant='body2'>
+															Do you or listed relatives have existing medical
+															conditions?
+														</Typography>
+													}
+												/>
+											)}
+										/>
+
+										<TextField
+											fullWidth
+											multiline
+											rows={3}
+											label='Details of Health Conditions (Optional)'
+											placeholder='If yes, please explain here...'
+											sx={{ mt: 2, mb: 2, bgcolor: 'white' }}
+											{...register('condition')}
+											error={!!errors.condition}
+											helperText={errors.condition?.message}
+										/>
+
+										<Divider sx={{ my: 2 }} />
+
+										<Controller
+											name='declaration'
+											control={control}
+											render={({ field }) => (
+												<FormControlLabel
+													control={
+														<Checkbox {...field} checked={!!field.value} />
+													}
+													label={
+														<Typography variant='body2' fontWeight='600'>
+															I hereby declare that all information provided is
+															true and accurate.
+														</Typography>
+													}
+												/>
+											)}
+										/>
+										{errors.declaration && (
+											<FormHelperText error>
+												You must accept the declaration to proceed.
+											</FormHelperText>
+										)}
+									</Box>
+								</FormSection>
+							)}
+
+							{/* NAVIGATION BUTTONS */}
+							<Box
+								sx={{
+									display: 'flex',
+									justifyContent: 'space-between',
+									mt: 6,
+									pt: 2,
+									borderTop: '1px solid',
+									borderColor: 'divider',
+								}}>
+								<Button
+									disabled={activeStep === 0}
+									onClick={handleBack}
+									startIcon={<ArrowBackIcon />}
+									sx={{ mr: 1 }}>
+									Back
+								</Button>
+
+								{activeStep === STEPS.length - 1 ? (
+									<Button
+										variant='contained'
 										color='primary'
-									/>
-								}
-								label={
-									<Typography variant='body2' fontWeight='500'>
-										I declare that the information provided is true, accurate,
-										and complete.
-									</Typography>
-								}
-							/>
-						)}
-					/>
-					{errors.declaration && (
-						<FormHelperText error>
-							You must accept the declaration
-						</FormHelperText>
-					)}
-				</Box>
+										size='large'
+										type='submit'
+										disabled={createMemberMutation.isLoading || isSubmitting}
+										startIcon={
+											createMemberMutation.isLoading ? (
+												<CircularProgress size={20} color='inherit' />
+											) : (
+												<SaveIcon />
+											)
+										}>
+										{createMemberMutation.isLoading
+											? 'Submitting...'
+											: 'Submit Policy'}
+									</Button>
+								) : (
+									<Button
+										variant='contained'
+										onClick={handleNext}
+										endIcon={<ArrowForwardIcon />}>
+										Next Step
+									</Button>
+								)}
+							</Box>
+						</form>
+					</CardContent>
+				</Card>
+			</Container>
 
-				{/* Action Buttons */}
-				<Stack
-					direction={{ xs: 'column', sm: 'row' }}
-					spacing={2}
-					justifyContent='flex-end'
-					sx={{ mt: 4 }}>
-					<Button
-						variant='outlined'
-						color='inherit'
-						onClick={() => router.push('/members')}>
-						Cancel
-					</Button>
-					<Button variant='outlined' color='secondary' onClick={() => reset()}>
-						Reset Form
-					</Button>
-					<Button
-						variant='contained'
-						size='large'
-						type='submit'
-						disabled={createMemberMutation.isLoading || isSubmitting}
-						startIcon={
-							createMemberMutation.isLoading ? (
-								<CircularProgress size={20} color='inherit' />
-							) : (
-								<SaveIcon />
-							)
-						}
-						sx={{ px: 4 }}>
-						{createMemberMutation.isLoading
-							? 'Submitting...'
-							: 'Register Policy'}
-					</Button>
-				</Stack>
-			</Paper>
+			{/* SUCCESS SNACKBAR */}
+			<Snackbar
+				open={openSnackbar}
+				autoHideDuration={2500}
+				onClose={handleCloseSnackbar}
+				anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+				<Alert
+					onClose={handleCloseSnackbar}
+					severity='success'
+					variant='filled'
+					sx={{ width: '100%' }}>
+					Registration successful! Redirecting...
+				</Alert>
+			</Snackbar>
 		</Box>
 	);
 }
