@@ -1,27 +1,47 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-import { memberSchema, memberDefaultValues } from '@/lib/formValidationSchemas';
+import { useRouter } from 'next/navigation';
+import { useMutation } from '@tanstack/react-query';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { memberSchema, memberDefaultValues } from '@/lib/formValidationSchemas';
+
+// MUI Icons
 import EscalatorWarningIcon from '@mui/icons-material/EscalatorWarning';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
-import { useRouter } from 'next/navigation';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
 import DeleteIcon from '@mui/icons-material/Delete';
-import IconButton from '@mui/material/IconButton';
-import { Button } from '@mui/material';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
+import SaveIcon from '@mui/icons-material/Save';
+import PersonIcon from '@mui/icons-material/Person';
+import ContactMailIcon from '@mui/icons-material/ContactMail';
+import BadgeIcon from '@mui/icons-material/Badge';
+
+// MUI Components
+import {
+	Box,
+	Paper,
+	Typography,
+	Button,
+	Grid,
+	TextField,
+	MenuItem,
+	IconButton,
+	Snackbar,
+	Alert,
+	Divider,
+	Checkbox,
+	FormControlLabel,
+	FormHelperText,
+	Stack,
+	CircularProgress,
+	InputAdornment,
+} from '@mui/material';
 
 export default function RegistrationForm() {
 	const [openSnackbar, setOpenSnackbar] = useState(false);
 	const router = useRouter();
+
+	// Constants
 	const MAX_DEPENDANTS = 4;
 	const MAX_PARENTS = 2;
 
@@ -34,6 +54,7 @@ export default function RegistrationForm() {
 	} = useForm({
 		defaultValues: memberDefaultValues,
 		resolver: yupResolver(memberSchema),
+		mode: 'onBlur', // Validates when user leaves the field
 	});
 
 	const {
@@ -55,24 +76,23 @@ export default function RegistrationForm() {
 	});
 
 	const handleClose = (event, reason) => {
-		if (reason === 'clickaway') {
-			return;
-		}
+		if (reason === 'clickaway') return;
 		setOpenSnackbar(false);
-		router.push('/members');
+		if (reason !== 'timeout') {
+			router.push('/members');
+		}
 	};
 
 	const createMemberMutation = useMutation({
 		mutationFn: (newMember) =>
 			fetch(`${process.env.NEXT_PUBLIC_FRONTEND_API_URL}/api/members`, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(newMember),
 			}).then((res) => res.json()),
-		onSuccess: (data) => {
+		onSuccess: () => {
 			setOpenSnackbar(true);
+			reset(); // Optional: clear form on success
 		},
 	});
 
@@ -80,516 +100,227 @@ export default function RegistrationForm() {
 		createMemberMutation.mutate(formData);
 	};
 
+	// Helper to render section headers
+	const SectionHeader = ({ title, icon }) => (
+		<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, mt: 1 }}>
+			{icon}
+			<Typography variant='h6' color='primary.main' fontWeight='600'>
+				{title}
+			</Typography>
+		</Box>
+	);
+
 	return (
 		<Box
-			component='form'
-			onSubmit={handleSubmit(onSubmit)}
 			sx={{
-				maxWidth: '1200px',
-				margin: '0 auto',
-				padding: { xs: 2, sm: 3, md: 4 },
+				minHeight: '100vh',
+				bgcolor: 'grey.50',
+				py: 4,
+				px: { xs: 2, md: 0 },
 			}}>
 			<Paper
-				elevation={3}
-				sx={{ padding: { xs: 2, sm: 3, md: 4 }, borderRadius: 2 }}>
-				<Typography
-					variant='h4'
-					component='h1'
-					gutterBottom
-					align='center'
-					sx={{
-						fontWeight: 'bold',
-						color: 'primary.main',
-						mb: 4,
-						fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-					}}>
-					Insurance Policy Registration Form
-				</Typography>
+				component='form'
+				onSubmit={handleSubmit(onSubmit)}
+				elevation={2}
+				sx={{
+					maxWidth: '1000px',
+					margin: '0 auto',
+					p: { xs: 3, md: 5 },
+					borderRadius: 3,
+				}}>
+				{/* Header */}
+				<Box sx={{ textAlign: 'center', mb: 5 }}>
+					<Typography
+						variant='h4'
+						component='h1'
+						fontWeight='bold'
+						color='primary'
+						gutterBottom>
+						Insurance Policy Registration
+					</Typography>
+					<Typography variant='body1' color='text.secondary'>
+						Please fill out the details below to register a new member.
+					</Typography>
+				</Box>
 
 				<Snackbar
 					open={openSnackbar}
-					autoHideDuration={2000}
+					autoHideDuration={2500}
 					onClose={handleClose}
-					anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+					anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
 					<Alert
 						onClose={handleClose}
 						severity='success'
 						variant='filled'
 						sx={{ width: '100%' }}>
-						Record created successfully 🙂
+						Record created successfully! Redirecting...
 					</Alert>
 				</Snackbar>
 
-				{/* Identification Details */}
-				<Box sx={{ mb: 4 }}>
-					<Typography
-						variant='h6'
-						component='h2'
-						sx={{ color: 'secondary.main', mb: 2 }}>
-						Identification Details
-					</Typography>
-					<Box
-						sx={{
-							display: 'grid',
-							gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-							gap: 3,
-						}}>
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								National Id
-							</Typography>
-							<Box
-								component='input'
-								{...register('nationalId')}
-								type='text'
-								placeholder='National Id'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.nationalId ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-										boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)',
-									},
-								}}
-							/>
-							{errors.nationalId && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.nationalId.message}
-								</Typography>
-							)}
-						</Box>
+				{/* 1. Identification Details */}
+				<SectionHeader
+					title='Identification'
+					icon={<BadgeIcon color='primary' />}
+				/>
+				<Grid container spacing={3} sx={{ mb: 4 }}>
+					<Grid item xs={12} sm={6}>
+						<TextField
+							fullWidth
+							label='National ID'
+							placeholder='Enter ID Number'
+							{...register('nationalId')}
+							error={!!errors.nationalId}
+							helperText={errors.nationalId?.message}
+						/>
+					</Grid>
+					<Grid item xs={12} sm={6}>
+						<TextField
+							select
+							fullWidth
+							label='Type of Identification'
+							defaultValue=''
+							{...register('idType')}
+							error={!!errors.idType}
+							helperText={errors.idType?.message}>
+							<MenuItem value='GhCard'>Ghana Card</MenuItem>
+							<MenuItem value='Passport'>Passport</MenuItem>
+						</TextField>
+					</Grid>
+				</Grid>
 
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Type of Identification
-							</Typography>
-							<Box
-								component='select'
-								{...register('idType')}
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: 'divider',
-									backgroundColor: 'background.paper',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}>
-								<option value='GhCard'>Ghana Card</option>
-								<option value='Passport'>Passport</option>
-							</Box>
-						</Box>
-					</Box>
-				</Box>
+				<Divider sx={{ my: 3 }} />
 
-				{/* Personal Details */}
-				<Box sx={{ mb: 4 }}>
-					<Typography
-						variant='h6'
-						component='h2'
-						sx={{ color: 'secondary.main', mb: 2 }}>
-						Personal Details
-					</Typography>
-					<Box
-						sx={{
-							display: 'grid',
-							gridTemplateColumns: {
-								xs: '1fr',
-								sm: '1fr 1fr',
-								md: '1fr 1fr 1fr',
-							},
-							gap: 3,
-						}}>
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								First Name
-							</Typography>
-							<Box
-								component='input'
-								{...register('firstName')}
-								type='text'
-								placeholder='First Name'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.firstName ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}
-							/>
-							{errors.firstName && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.firstName.message}
-								</Typography>
-							)}
-						</Box>
+				{/* 2. Personal Details */}
+				<SectionHeader
+					title='Personal Details'
+					icon={<PersonIcon color='primary' />}
+				/>
+				<Grid container spacing={3} sx={{ mb: 4 }}>
+					<Grid item xs={12} sm={4}>
+						<TextField
+							fullWidth
+							label='First Name'
+							{...register('firstName')}
+							error={!!errors.firstName}
+							helperText={errors.firstName?.message}
+						/>
+					</Grid>
+					<Grid item xs={12} sm={4}>
+						<TextField
+							fullWidth
+							label='Middle Name'
+							{...register('middleName')}
+							error={!!errors.middleName}
+							helperText={errors.middleName?.message}
+						/>
+					</Grid>
+					<Grid item xs={12} sm={4}>
+						<TextField
+							fullWidth
+							label='Last Name'
+							{...register('lastName')}
+							error={!!errors.lastName}
+							helperText={errors.lastName?.message}
+						/>
+					</Grid>
+					<Grid item xs={12} sm={6}>
+						<TextField
+							fullWidth
+							type='date'
+							label='Date of Birth'
+							InputLabelProps={{ shrink: true }}
+							{...register('birthday')}
+							error={!!errors.birthday}
+							helperText={errors.birthday?.message}
+						/>
+					</Grid>
+					<Grid item xs={12} sm={6}>
+						<TextField
+							select
+							fullWidth
+							label='Gender'
+							defaultValue=''
+							{...register('gender')}
+							error={!!errors.gender}
+							helperText={errors.gender?.message}>
+							<MenuItem value='Male'>Male</MenuItem>
+							<MenuItem value='Female'>Female</MenuItem>
+						</TextField>
+					</Grid>
+				</Grid>
 
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Middle Name
-							</Typography>
-							<Box
-								component='input'
-								{...register('middleName')}
-								type='text'
-								placeholder='Middle Name'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.middleName ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}
-							/>
-							{errors.middleName && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.middleName.message}
-								</Typography>
-							)}
-						</Box>
+				<Divider sx={{ my: 3 }} />
 
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Last Name
-							</Typography>
-							<Box
-								component='input'
-								{...register('lastName')}
-								type='text'
-								placeholder='Last Name'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.lastName ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}
-							/>
-							{errors.lastName && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.lastName.message}
-								</Typography>
-							)}
-						</Box>
+				{/* 3. Contact Details */}
+				<SectionHeader
+					title='Contact Details'
+					icon={<ContactMailIcon color='primary' />}
+				/>
+				<Grid container spacing={3} sx={{ mb: 4 }}>
+					<Grid item xs={12} sm={6}>
+						<TextField
+							fullWidth
+							type='email'
+							label='Email Address'
+							{...register('email')}
+							error={!!errors.email}
+							helperText={errors.email?.message}
+						/>
+					</Grid>
+					<Grid item xs={12} sm={6}>
+						<TextField
+							fullWidth
+							type='tel'
+							label='Telephone'
+							{...register('telephone')}
+							error={!!errors.telephone}
+							helperText={errors.telephone?.message}
+						/>
+					</Grid>
+					<Grid item xs={12}>
+						<TextField
+							fullWidth
+							label='Residential Address'
+							{...register('residence')}
+							error={!!errors.residence}
+							helperText={errors.residence?.message}
+						/>
+					</Grid>
+				</Grid>
 
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Birthday
-							</Typography>
-							<Box
-								component='input'
-								{...register('birthday')}
-								type='date'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.birthday ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}
-							/>
-							{errors.birthday && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.birthday.message}
-								</Typography>
-							)}
-						</Box>
+				<Divider sx={{ my: 3 }} />
 
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Gender
-							</Typography>
-							<Box
-								component='select'
-								{...register('gender')}
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.gender ? 'error.main' : 'divider',
-									backgroundColor: 'background.paper',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}>
-								<option value='Male'>Male</option>
-								<option value='Female'>Female</option>
-							</Box>
-							{errors.gender && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.gender.message}
-								</Typography>
-							)}
-						</Box>
-					</Box>
-				</Box>
+				{/* 4. Spouse Details */}
+				<SectionHeader
+					title='Spouse Details'
+					icon={<FamilyRestroomIcon color='primary' />}
+				/>
+				<Grid container spacing={3} sx={{ mb: 4 }}>
+					<Grid item xs={12} sm={6}>
+						<TextField
+							fullWidth
+							label='Spouse Full Name'
+							{...register('spouseFullname')}
+							error={!!errors.spouseFullname}
+							helperText={errors.spouseFullname?.message}
+						/>
+					</Grid>
+					<Grid item xs={12} sm={6}>
+						<TextField
+							fullWidth
+							type='date'
+							label='Spouse Birthday'
+							InputLabelProps={{ shrink: true }}
+							{...register('spousebirthday')}
+							error={!!errors.spousebirthday}
+							helperText={errors.spousebirthday?.message}
+						/>
+					</Grid>
+				</Grid>
 
-				{/* Contact Details */}
-				<Box sx={{ mb: 4 }}>
-					<Typography
-						variant='h6'
-						component='h2'
-						sx={{ color: 'secondary.main', mb: 2 }}>
-						Contact Details
-					</Typography>
-					<Box
-						sx={{
-							display: 'grid',
-							gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-							gap: 3,
-						}}>
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Email
-							</Typography>
-							<Box
-								component='input'
-								{...register('email')}
-								type='text'
-								placeholder='Email'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.email ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}
-							/>
-							{errors.email && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.email.message}
-								</Typography>
-							)}
-						</Box>
+				<Divider sx={{ my: 3 }} />
 
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Telephone
-							</Typography>
-							<Box
-								component='input'
-								{...register('telephone')}
-								type='text'
-								placeholder='Telephone'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.telephone ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}
-							/>
-							{errors.telephone && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.telephone.message}
-								</Typography>
-							)}
-						</Box>
-
-						<Box sx={{ gridColumn: { xs: '1 / -1', sm: '1 / -1' } }}>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Address
-							</Typography>
-							<Box
-								component='input'
-								{...register('residence')}
-								type='text'
-								placeholder='Address'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.residence ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}
-							/>
-							{errors.residence && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.residence.message}
-								</Typography>
-							)}
-						</Box>
-					</Box>
-				</Box>
-
-				{/* Spouse Details */}
-				<Box sx={{ mb: 4 }}>
-					<Typography
-						variant='h6'
-						component='h2'
-						sx={{ color: 'secondary.main', mb: 2 }}>
-						Spouse Details
-					</Typography>
-					<Box
-						sx={{
-							display: 'grid',
-							gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-							gap: 3,
-						}}>
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Spouse Full Name
-							</Typography>
-							<Box
-								component='input'
-								{...register('spouseFullname')}
-								type='text'
-								placeholder='Spouse Full Name'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.spouseFullname ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}
-							/>
-							{errors.spouseFullname && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.spouseFullname.message}
-								</Typography>
-							)}
-						</Box>
-
-						<Box>
-							<Typography
-								variant='body2'
-								component='label'
-								sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-								Spouse Birthday
-							</Typography>
-							<Box
-								component='input'
-								{...register('spousebirthday')}
-								type='date'
-								sx={{
-									width: '100%',
-									padding: '12px',
-									borderRadius: '4px',
-									border: '1px solid',
-									borderColor: errors.spousebirthday ? 'error.main' : 'divider',
-									'&:focus': {
-										outline: 'none',
-										borderColor: 'primary.main',
-									},
-								}}
-							/>
-							{errors.spousebirthday && (
-								<Typography
-									variant='caption'
-									color='error'
-									sx={{ display: 'block', mt: 1 }}>
-									{errors.spousebirthday.message}
-								</Typography>
-							)}
-						</Box>
-					</Box>
-				</Box>
-
-				{/* Children Details */}
+				{/* 5. Children Details */}
 				<Box sx={{ mb: 4 }}>
 					<Box
 						sx={{
@@ -598,115 +329,84 @@ export default function RegistrationForm() {
 							alignItems: 'center',
 							mb: 2,
 						}}>
-						<Typography
-							variant='h6'
-							component='h2'
-							sx={{ color: 'secondary.main' }}>
-							Children Details
-						</Typography>
+						<SectionHeader
+							title='Children Details'
+							icon={<EscalatorWarningIcon color='primary' />}
+						/>
 						<Button
-							onClick={() => appendChild({ fullName: '', birthday: '' })}
 							variant='contained'
-							color='primary'
-							type='button'
+							size='small'
+							onClick={() => appendChild({ fullName: '', birthday: '' })}
 							disabled={childFields.length >= MAX_DEPENDANTS}
-							startIcon={<EscalatorWarningIcon />}
-							size='small'>
+							startIcon={<EscalatorWarningIcon />}>
 							Add Child
 						</Button>
 					</Box>
 
-					{childFields.map((field, index) => (
-						<Paper key={field.id} sx={{ p: 2, mb: 2, position: 'relative' }}>
-							<Box
-								sx={{
-									display: 'grid',
-									gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-									gap: 3,
-								}}>
-								<Box>
-									<Typography
-										variant='body2'
-										component='label'
-										sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-										Full Name
-									</Typography>
-									<Box
-										component='input'
-										{...register(`children.${index}.fullName`)}
-										type='text'
-										placeholder={`Child ${index + 1} Full Name`}
-										sx={{
-											width: '100%',
-											padding: '12px',
-											borderRadius: '4px',
-											border: '1px solid',
-											borderColor: errors.children?.[index]?.fullName
-												? 'error.main'
-												: 'divider',
-											'&:focus': {
-												outline: 'none',
-												borderColor: 'primary.main',
-											},
-										}}
-									/>
-									{errors.children?.[index]?.fullName && (
-										<Typography
-											variant='caption'
-											color='error'
-											sx={{ display: 'block', mt: 1 }}>
-											Full name is required
-										</Typography>
-									)}
-								</Box>
+					{childFields.length === 0 && (
+						<Typography
+							variant='body2'
+							color='text.secondary'
+							sx={{ fontStyle: 'italic', ml: 4 }}>
+							No children added.
+						</Typography>
+					)}
 
-								<Box>
-									<Typography
-										variant='body2'
-										component='label'
-										sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-										Birthday
-									</Typography>
-									<Box
-										component='input'
-										{...register(`children.${index}.birthday`)}
-										type='date'
-										sx={{
-											width: '100%',
-											padding: '12px',
-											borderRadius: '4px',
-											border: '1px solid',
-											borderColor: errors.children?.[index]?.birthday
-												? 'error.main'
-												: 'divider',
-											'&:focus': {
-												outline: 'none',
-												borderColor: 'primary.main',
-											},
-										}}
-									/>
-									{errors.children?.[index]?.birthday && (
-										<Typography
-											variant='caption'
-											color='error'
-											sx={{ display: 'block', mt: 1 }}>
-											Birthday is required
-										</Typography>
-									)}
+					<Stack spacing={2}>
+						{childFields.map((field, index) => (
+							<Paper
+								key={field.id}
+								variant='outlined'
+								sx={{ p: 2, bgcolor: 'grey.50', position: 'relative' }}>
+								<Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+									<IconButton
+										size='small'
+										color='error'
+										onClick={() => removeChild(index)}
+										aria-label='remove child'>
+										<DeleteIcon fontSize='small' />
+									</IconButton>
 								</Box>
-							</Box>
-							<IconButton
-								color='error'
-								onClick={() => removeChild(index)}
-								aria-label='delete'
-								sx={{ position: 'absolute', top: 8, right: 8 }}>
-								<DeleteIcon fontSize='small' />
-							</IconButton>
-						</Paper>
-					))}
+								<Grid container spacing={2} alignItems='flex-start'>
+									<Grid item xs={12} sm={6}>
+										<TextField
+											fullWidth
+											size='small'
+											label={`Child ${index + 1} Full Name`}
+											{...register(`children.${index}.fullName`)}
+											error={!!errors.children?.[index]?.fullName}
+											helperText={
+												errors.children?.[index]?.fullName
+													? 'Full name is required'
+													: ''
+											}
+										/>
+									</Grid>
+									<Grid item xs={12} sm={5}>
+										<TextField
+											fullWidth
+											size='small'
+											type='date'
+											label='Birthday'
+											InputLabelProps={{ shrink: true }}
+											{...register(`children.${index}.birthday`)}
+											error={!!errors.children?.[index]?.birthday}
+											helperText={
+												errors.children?.[index]?.birthday
+													? 'Birthday is required'
+													: ''
+											}
+										/>
+									</Grid>
+								</Grid>
+							</Paper>
+						))}
+					</Stack>
 				</Box>
 
-				{/* Parent Details */}
+				<Divider sx={{ my: 3 }} />
+
+				{/* 6. Parent Details */}
 				<Box sx={{ mb: 4 }}>
 					<Box
 						sx={{
@@ -715,290 +415,208 @@ export default function RegistrationForm() {
 							alignItems: 'center',
 							mb: 2,
 						}}>
-						<Typography
-							variant='h6'
-							component='h2'
-							sx={{ color: 'secondary.main' }}>
-							Parent Details
-						</Typography>
+						<SectionHeader
+							title='Parent Details'
+							icon={<FamilyRestroomIcon color='primary' />}
+						/>
 						<Button
 							variant='contained'
 							color='secondary'
-							type='button'
-							disabled={parentFields.length >= MAX_PARENTS}
+							size='small'
 							onClick={() =>
 								appendParent({ fullName: '', birthday: '', relationship: '' })
 							}
-							startIcon={<FamilyRestroomIcon />}
-							size='small'>
+							disabled={parentFields.length >= MAX_PARENTS}
+							startIcon={<FamilyRestroomIcon />}>
 							Add Parent
 						</Button>
 					</Box>
 
-					{parentFields.map((field, index) => (
-						<Paper key={field.id} sx={{ p: 2, mb: 2, position: 'relative' }}>
-							<Box
-								sx={{
-									display: 'grid',
-									gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-									gap: 3,
-								}}>
-								<Box>
-									<Typography
-										variant='body2'
-										component='label'
-										sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-										Full Name
-									</Typography>
-									<Box
-										component='input'
-										{...register(`parents.${index}.fullName`)}
-										type='text'
-										placeholder={`Parent ${index + 1} Full Name`}
-										sx={{
-											width: '100%',
-											padding: '12px',
-											borderRadius: '4px',
-											border: '1px solid',
-											borderColor: errors.parents?.[index]?.fullName
-												? 'error.main'
-												: 'divider',
-											'&:focus': {
-												outline: 'none',
-												borderColor: 'primary.main',
-											},
-										}}
-									/>
-									{errors.parents?.[index]?.fullName && (
-										<Typography
-											variant='caption'
-											color='error'
-											sx={{ display: 'block', mt: 1 }}>
-											Full name is required
-										</Typography>
-									)}
-								</Box>
+					{parentFields.length === 0 && (
+						<Typography
+							variant='body2'
+							color='text.secondary'
+							sx={{ fontStyle: 'italic', ml: 4 }}>
+							No parents added.
+						</Typography>
+					)}
 
-								<Box>
-									<Typography
-										variant='body2'
-										component='label'
-										sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-										Birthday
-									</Typography>
-									<Box
-										component='input'
-										{...register(`parents.${index}.birthday`)}
-										type='date'
-										sx={{
-											width: '100%',
-											padding: '12px',
-											borderRadius: '4px',
-											border: '1px solid',
-											borderColor: errors.parents?.[index]?.birthday
-												? 'error.main'
-												: 'divider',
-											'&:focus': {
-												outline: 'none',
-												borderColor: 'primary.main',
-											},
-										}}
-									/>
-									{errors.parents?.[index]?.birthday && (
-										<Typography
-											variant='caption'
-											color='error'
-											sx={{ display: 'block', mt: 1 }}>
-											Birthday is required
-										</Typography>
-									)}
+					<Stack spacing={2}>
+						{parentFields.map((field, index) => (
+							<Paper
+								key={field.id}
+								variant='outlined'
+								sx={{ p: 2, bgcolor: 'grey.50', position: 'relative' }}>
+								<Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+									<IconButton
+										size='small'
+										color='error'
+										onClick={() => removeParent(index)}
+										aria-label='remove parent'>
+										<DeleteIcon fontSize='small' />
+									</IconButton>
 								</Box>
-
-								<Box>
-									<Typography
-										variant='body2'
-										component='label'
-										sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-										Relation
-									</Typography>
-									<Box
-										component='select'
-										{...register(`parents.${index}.relationship`)}
-										sx={{
-											width: '100%',
-											padding: '12px',
-											borderRadius: '4px',
-											border: '1px solid',
-											borderColor: errors.parents?.[index]?.relationship
-												? 'error.main'
-												: 'divider',
-											backgroundColor: 'background.paper',
-											'&:focus': {
-												outline: 'none',
-												borderColor: 'primary.main',
-											},
-										}}>
-										<option value='Father'>Father</option>
-										<option value='Mother'>Mother</option>
-										<option value='Inlaw'>In-law</option>
-									</Box>
-									{errors.parents?.[index]?.relationship && (
-										<Typography
-											variant='caption'
-											color='error'
-											sx={{ display: 'block', mt: 1 }}>
-											Relation is required
-										</Typography>
-									)}
-								</Box>
-							</Box>
-							<IconButton
-								color='error'
-								onClick={() => removeParent(index)}
-								aria-label='delete'
-								sx={{ position: 'absolute', top: 8, right: 8 }}>
-								<DeleteIcon fontSize='small' />
-							</IconButton>
-						</Paper>
-					))}
+								<Grid container spacing={2}>
+									<Grid item xs={12} sm={5}>
+										<TextField
+											fullWidth
+											size='small'
+											label={`Parent ${index + 1} Full Name`}
+											{...register(`parents.${index}.fullName`)}
+											error={!!errors.parents?.[index]?.fullName}
+											helperText={
+												errors.parents?.[index]?.fullName ? 'Required' : ''
+											}
+										/>
+									</Grid>
+									<Grid item xs={12} sm={3}>
+										<TextField
+											fullWidth
+											size='small'
+											type='date'
+											label='Birthday'
+											InputLabelProps={{ shrink: true }}
+											{...register(`parents.${index}.birthday`)}
+											error={!!errors.parents?.[index]?.birthday}
+											helperText={
+												errors.parents?.[index]?.birthday ? 'Required' : ''
+											}
+										/>
+									</Grid>
+									<Grid item xs={12} sm={3}>
+										<TextField
+											select
+											fullWidth
+											size='small'
+											label='Relation'
+											defaultValue=''
+											{...register(`parents.${index}.relationship`)}
+											error={!!errors.parents?.[index]?.relationship}
+											helperText={
+												errors.parents?.[index]?.relationship ? 'Required' : ''
+											}>
+											<MenuItem value='Father'>Father</MenuItem>
+											<MenuItem value='Mother'>Mother</MenuItem>
+											<MenuItem value='Inlaw'>In-law</MenuItem>
+										</TextField>
+									</Grid>
+								</Grid>
+							</Paper>
+						))}
+					</Stack>
 				</Box>
 
-				{/* Undertaking */}
-				<Box sx={{ mb: 4 }}>
-					<Typography
-						variant='h6'
-						component='h2'
-						sx={{ color: 'secondary.main', mb: 2 }}>
-						Undertaking
+				<Divider sx={{ my: 3 }} />
+
+				{/* 7. Undertaking */}
+				<Box
+					sx={{
+						mb: 4,
+						p: 2,
+						bgcolor: 'warning.50',
+						borderRadius: 2,
+						border: '1px solid',
+						borderColor: 'warning.100',
+					}}>
+					<Typography variant='h6' gutterBottom color='warning.main'>
+						Undertaking & Declaration
 					</Typography>
 
-					<FormControlLabel
-						control={
-							<Controller
-								name='underlying'
-								control={control}
-								render={({ field }) => (
+					<Controller
+						name='underlying'
+						control={control}
+						render={({ field }) => (
+							<FormControlLabel
+								control={
 									<Checkbox
 										{...field}
 										checked={!!field.value}
-										sx={{
-											color: 'warning.main',
-											'&.Mui-checked': {
-												color: 'warning.main',
-											},
-										}}
+										color='warning'
 									/>
-								)}
+								}
+								label={
+									<Typography variant='body2'>
+										Do you or your relatives listed have any ongoing illness or
+										condition?
+									</Typography>
+								}
 							/>
-						}
-						label={
-							<Typography variant='body2' sx={{ fontStyle: 'italic' }}>
-								Do you or your relatives listed have any ongoing illness or
-								condition?
-							</Typography>
-						}
-						sx={{ mb: 2 }}
-					/>
-
-					<Box sx={{ mb: 3 }}>
-						<Typography
-							variant='body2'
-							component='label'
-							sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-							Known Health Conditions
-						</Typography>
-						<Box
-							component='textarea'
-							{...register('condition')}
-							rows={3}
-							placeholder='Conditions'
-							sx={{
-								width: '100%',
-								padding: '12px',
-								borderRadius: '4px',
-								border: '1px solid',
-								borderColor: errors.condition ? 'error.main' : 'divider',
-								'&:focus': {
-									outline: 'none',
-									borderColor: 'primary.main',
-								},
-							}}
-						/>
-						{errors.condition && (
-							<Typography
-								variant='caption'
-								color='error'
-								sx={{ display: 'block', mt: 1 }}>
-								{errors.condition.message}
-							</Typography>
 						)}
-					</Box>
-
-					<FormControlLabel
-						control={
-							<Controller
-								name='declaration'
-								control={control}
-								render={({ field }) => (
-									<Checkbox
-										{...register('declaration')}
-										checked={!!field.value}
-										sx={{
-											color: 'warning.main',
-											'&.Mui-checked': {
-												color: 'warning.main',
-											},
-										}}
-									/>
-								)}
-							/>
-						}
-						label={
-							<Typography variant='body2' sx={{ fontStyle: 'italic' }}>
-								I declare that the information provided is true, accurate and
-								complete to the best of my belief and knowledge
-							</Typography>
-						}
 					/>
+
+					<TextField
+						fullWidth
+						multiline
+						rows={3}
+						label='Known Health Conditions (If any)'
+						placeholder='Please describe details here...'
+						sx={{ mt: 2, mb: 2, bgcolor: 'background.paper' }}
+						{...register('condition')}
+						error={!!errors.condition}
+						helperText={errors.condition?.message}
+					/>
+
+					<Controller
+						name='declaration'
+						control={control}
+						render={({ field }) => (
+							<FormControlLabel
+								control={
+									<Checkbox
+										{...field}
+										checked={!!field.value}
+										color='primary'
+									/>
+								}
+								label={
+									<Typography variant='body2' fontWeight='500'>
+										I declare that the information provided is true, accurate,
+										and complete.
+									</Typography>
+								}
+							/>
+						)}
+					/>
+					{errors.declaration && (
+						<FormHelperText error>
+							You must accept the declaration
+						</FormHelperText>
+					)}
 				</Box>
 
-				{/* Form Actions */}
-				<Box
-					sx={{
-						display: 'flex',
-						flexDirection: { xs: 'column', sm: 'row' },
-						gap: 2,
-						justifyContent: 'flex-end',
-						mt: 4,
-					}}>
+				{/* Action Buttons */}
+				<Stack
+					direction={{ xs: 'column', sm: 'row' }}
+					spacing={2}
+					justifyContent='flex-end'
+					sx={{ mt: 4 }}>
 					<Button
 						variant='outlined'
-						color='error'
-						onClick={() => router.push('/members')}
-						fullWidth={{ xs: true, sm: false }}>
+						color='inherit'
+						onClick={() => router.push('/members')}>
 						Cancel
 					</Button>
-					<Button
-						variant='outlined'
-						color='secondary'
-						onClick={() => reset()}
-						fullWidth={{ xs: true, sm: false }}>
-						Reset
+					<Button variant='outlined' color='secondary' onClick={() => reset()}>
+						Reset Form
 					</Button>
 					<Button
 						variant='contained'
-						disabled={createMemberMutation.isLoading}
+						size='large'
 						type='submit'
-						fullWidth={{ xs: true, sm: false }}
-						sx={{
-							backgroundColor: 'primary.main',
-							'&:hover': {
-								backgroundColor: 'primary.dark',
-							},
-						}}>
-						{createMemberMutation.isLoading ? 'Submitting...' : 'Register'}
+						disabled={createMemberMutation.isLoading || isSubmitting}
+						startIcon={
+							createMemberMutation.isLoading ? (
+								<CircularProgress size={20} color='inherit' />
+							) : (
+								<SaveIcon />
+							)
+						}
+						sx={{ px: 4 }}>
+						{createMemberMutation.isLoading
+							? 'Submitting...'
+							: 'Register Policy'}
 					</Button>
-				</Box>
+				</Stack>
 			</Paper>
 		</Box>
 	);
