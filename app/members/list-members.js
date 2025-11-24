@@ -1,18 +1,25 @@
 'use client';
+
 import { fetchMembers, deleteMember } from '@/helpers/api-request';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useMediaQuery } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, useTheme } from '@mui/material/styles';
+import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/app/store/userStore';
+import Link from 'next/link';
+
+// Icons
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import PreviewRoundedIcon from '@mui/icons-material/PreviewRounded';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
-import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
-import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/app/store/userStore';
+import SearchIcon from '@mui/icons-material/Search';
+import PersonIcon from '@mui/icons-material/Person';
+
+// MUI Components
 import {
 	Table,
 	TableHead,
@@ -36,33 +43,25 @@ import {
 	DialogContent,
 	DialogContentText,
 	DialogTitle,
+	Container,
+	TextField,
+	InputAdornment,
+	Stack,
+	Card,
+	CardContent,
+	Divider,
+	Grid,
 } from '@mui/material';
-import Link from 'next/link';
-import Image from 'next/image';
 
-// Constants
-const TABLE_HEADERS = [
-	{ id: 'info', label: 'Info', mobile: false },
-	{ id: 'gender', label: 'Gender', mobile: true },
-	{ id: 'email', label: 'Email', mobile: true },
-	{ id: 'telephone', label: 'Telephone', mobile: true },
-	{ id: 'status', label: 'Status', mobile: true },
-	{ id: 'actions', label: 'Actions', mobile: false },
-];
-
-const ROWS_PER_PAGE_OPTIONS = [5, 10, 25];
-
-// Styled components
+// --- Styled Components ---
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
 	[`&.${TableCell.head}`]: {
-		backgroundColor: '#00ACAC',
+		backgroundColor: '#00ACAC', // Brand Color
 		color: theme.palette.common.white,
-		fontSize: 15,
-		letterSpacing: 0.5,
+		fontWeight: 600,
 	},
 	[`&.${TableCell.body}`]: {
 		fontSize: 14,
-		wordBreak: 'break-word',
 	},
 }));
 
@@ -70,113 +69,201 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 	'&:nth-of-type(odd)': {
 		backgroundColor: theme.palette.action.hover,
 	},
+	'&:hover': {
+		backgroundColor: 'rgba(0, 172, 172, 0.08)', // Subtle hover effect
+	},
 	'&:last-child td, &:last-child th': {
 		border: 0,
 	},
 }));
 
-// MemberInfoCell component
-function MemberInfoCell({ member }) {
+// --- Helper Sub-Components ---
+
+// 1. Mobile Card View (shown only on small screens)
+function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
 	return (
-		<Box sx={{ display: 'flex', alignItems: 'center' }}>
-			<Avatar src='/defaultPhoto.png' sx={{ width: 32, height: 32, mr: 1 }} />
-			<Box
-				sx={{
-					display: 'flex flex-col',
-					gap: 1,
-					flexDirection: 'row',
-					ml: { md: 1 },
-				}}>
-				<Typography variant='body1' sx={{ fontWeight: 'bold' }}>
-					{member.lastName}
-				</Typography>
-				<span className='text-md text-gray-500 mr-1.5'>{member.firstName}</span>
-				<span className='text-md text-gray-500 ml-2'>{member.middleName}</span>
-			</Box>
-		</Box>
+		<Card variant='outlined' sx={{ mb: 2, borderRadius: 2 }}>
+			<CardContent>
+				<Box
+					display='flex'
+					justifyContent='space-between'
+					alignItems='flex-start'
+					mb={2}>
+					<Box display='flex' gap={2}>
+						<Avatar
+							src='/defaultPhoto.png'
+							sx={{ width: 48, height: 48, bgcolor: '#00ACAC' }}>
+							<PersonIcon />
+						</Avatar>
+						<Box>
+							<Typography variant='subtitle1' fontWeight='bold'>
+								{member.lastName} {member.firstName}
+							</Typography>
+							<Typography variant='caption' color='text.secondary'>
+								{member.nationalId}
+							</Typography>
+						</Box>
+					</Box>
+					<StatusChip declaration={member.declaration} size='small' />
+				</Box>
+
+				<Stack spacing={1} sx={{ mb: 2 }}>
+					<Box display='flex' justifyContent='space-between'>
+						<Typography variant='body2' color='text.secondary'>
+							Email:
+						</Typography>
+						<Typography variant='body2' fontWeight={500}>
+							{member.email}
+						</Typography>
+					</Box>
+					<Box display='flex' justifyContent='space-between'>
+						<Typography variant='body2' color='text.secondary'>
+							Phone:
+						</Typography>
+						<Typography variant='body2' fontWeight={500}>
+							{member.telephone}
+						</Typography>
+					</Box>
+					<Box display='flex' justifyContent='space-between'>
+						<Typography variant='body2' color='text.secondary'>
+							Gender:
+						</Typography>
+						<Typography variant='body2' fontWeight={500}>
+							{member.gender}
+						</Typography>
+					</Box>
+				</Stack>
+
+				{canEdit && (
+					<>
+						<Divider sx={{ my: 1 }} />
+						<Box display='flex' justifyContent='flex-end' gap={1}>
+							<Button
+								size='small'
+								startIcon={<PreviewRoundedIcon />}
+								onClick={() => onView(member.id)}>
+								View
+							</Button>
+							<Button
+								size='small'
+								color='primary'
+								startIcon={<EditIcon />}
+								onClick={() => onEdit(member.id)}>
+								Edit
+							</Button>
+							<Button
+								size='small'
+								color='error'
+								startIcon={<DeleteIcon />}
+								onClick={() => onDelete(member)}>
+								Delete
+							</Button>
+						</Box>
+					</>
+				)}
+			</CardContent>
+		</Card>
 	);
 }
 
-// StatusChip component
-function StatusChip({ declaration }) {
+// 2. Status Chip
+function StatusChip({ declaration, size = 'medium' }) {
 	return (
 		<Chip
-			size='small'
+			size={size}
 			icon={declaration ? <CheckCircleIcon /> : <CancelIcon />}
 			label={declaration ? 'Complete' : 'Pending'}
-			color={declaration ? 'success' : 'error'}
-			variant='outlined'
+			color={declaration ? 'success' : 'warning'}
+			variant={declaration ? 'filled' : 'outlined'}
 		/>
 	);
 }
 
-// ActionButton component
-function ActionButton({
-	href,
-	onClick,
-	icon: Icon,
-	color,
-
-	label,
-	as,
+// 3. Action Buttons Group
+function ActionGroup({
+	memberId,
+	canEdit,
+	onView,
+	onEdit,
+	onDelete,
+	memberData,
 }) {
-	const buttonProps = href ? { component: Link, href } : { onClick };
+	if (!canEdit)
+		return (
+			<Typography variant='caption' color='text.secondary'>
+				View Only
+			</Typography>
+		);
 
 	return (
-		<IconButton
-			size='small'
-			sx={{
-				color: 'white',
-				bgcolor: color,
-				'&:hover': { bgcolor: 'green' },
-			}}
-			aria-label={label}
-			{...buttonProps}>
-			<Icon fontSize='small' />
-		</IconButton>
+		<Stack direction='row' spacing={1}>
+			<Tooltip title='View Details'>
+				<IconButton
+					size='small'
+					onClick={() => onView(memberId)}
+					sx={{ color: '#CC6CE7', bgcolor: '#f3e5f5' }}>
+					<PreviewRoundedIcon fontSize='small' />
+				</IconButton>
+			</Tooltip>
+			<Tooltip title='Edit Record'>
+				<IconButton
+					size='small'
+					onClick={() => onEdit(memberId)}
+					sx={{ color: '#060270', bgcolor: '#e3f2fd' }}>
+					<EditIcon fontSize='small' />
+				</IconButton>
+			</Tooltip>
+			<Tooltip title='Delete Record'>
+				<IconButton
+					size='small'
+					onClick={() => onDelete(memberData)}
+					sx={{ color: '#D20103', bgcolor: '#ffebee' }}>
+					<DeleteIcon fontSize='small' />
+				</IconButton>
+			</Tooltip>
+		</Stack>
 	);
 }
 
+// --- Main Component ---
 export default function ListMembers() {
 	const queryClient = useQueryClient();
+	const theme = useTheme();
 	const [filter, setFilter] = useState('');
-	//for deletion
+
+	// Dialog & Pagination State
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-	//for paging
 	const [page, setPage] = useState(0);
 	const [rowsPerPage, setRowsPerPage] = useState(10);
-	//from clerk
+
+	// Auth & Store
 	const { user } = useUser();
-	const role = user?.publicMetadata?.role;
-	const uniqueId = user?.publicMetadata?.uniqueId;
-	const isMobile = useMediaQuery('(max-width:640px)', { noSsr: true });
-	//const primaryEmail = user?.primaryEmailAddress?.emailAddress;
 	const router = useRouter();
 	const setUser = useUserStore((state) => state.setUser);
 
+	const role = user?.publicMetadata?.role;
+	const uniqueId = user?.publicMetadata?.uniqueId;
+	const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+	// Data Fetching
 	const { data, isLoading, error } = useQuery({
 		queryKey: ['getmembers'],
 		queryFn: () => fetchMembers(),
 	});
 
-	//filtered data
+	// Filtering Logic
 	const filteredList = useMemo(() => {
 		if (!data) return [];
-
 		const lower = filter.toLowerCase();
 		return data.filter((record) =>
-			[
-				record.firstName.trim(),
-				record.lastName.trim(),
-				record.email.trim(),
-				record.middleName.trim(),
-			].some((field) => field?.toLowerCase().includes(lower))
+			[record.firstName, record.lastName, record.email, record.middleName].some(
+				(field) => field?.toLowerCase().includes(lower)
+			)
 		);
 	}, [data, filter]);
 
-	// Pagination handlers
-
+	// Pagination Logic
 	const paginatedUsers = useMemo(() => {
 		const start = page * rowsPerPage;
 		return filteredList.slice(start, start + rowsPerPage);
@@ -188,13 +275,9 @@ export default function ListMembers() {
 		setPage(0);
 	};
 
-	// Handle user deletion
-	const handleDeleteClick = (selectUser) => {
-		// setSelectedUser({
-		// 	id: user.id,
-		// 	name: `${user.firstName} ${user.lastName}`,
-		// });
-		setSelectedUser(selectUser);
+	// --- Handlers ---
+	const handleDeleteClick = (userToDelete) => {
+		setSelectedUser(userToDelete);
 		setConfirmDialogOpen(true);
 	};
 
@@ -207,7 +290,7 @@ export default function ListMembers() {
 		mutationFn: (id) => deleteMember(id),
 		onSuccess: (_, id) => {
 			queryClient.setQueryData(['getmembers'], (old) =>
-				old.filter((deleted) => deleted.id !== id)
+				old.filter((m) => m.id !== id)
 			);
 			setConfirmDialogOpen(false);
 			setSelectedUser(null);
@@ -218,239 +301,239 @@ export default function ListMembers() {
 		if (selectedUser) deleteUser.mutate(selectedUser.id);
 	};
 
-	// Hanlde user Edit
 	const handleEditClick = (recordId) => {
-		//	router.push(`/members/${userId}/edit`);
-		const user = { id: recordId };
-		setUser(user); // Save user in Zustand
-		router.push('/members/edit/record'); // Navigate without query string
+		setUser({ id: recordId });
+		router.push('/members/edit/record');
 	};
 
-	// Hanlde user Edit
 	const handleViewClick = (recordId) => {
-		//	router.push(`/members/${userId}/edit`);
-		const user = { id: recordId };
-		setUser(user); // Save user in Zustand
-		router.push('/members/details/view'); // Navigate without query string
+		setUser({ id: recordId });
+		router.push('/members/details/view');
 	};
 
+	// --- Render Loading/Error ---
 	if (isLoading) {
 		return (
-			<Box display='flex' justifyContent='center' mt={4}>
-				<CircularProgress />
+			<Box
+				display='flex'
+				justifyContent='center'
+				alignItems='center'
+				minHeight='50vh'>
+				<CircularProgress sx={{ color: '#00ACAC' }} />
 			</Box>
 		);
 	}
 
 	if (error) {
 		return (
-			<Box mt={4} textAlign='center'>
-				<Alert severity='error' sx={{ mb: 2 }}>
-					{error}
+			<Container maxWidth='md' sx={{ mt: 4 }}>
+				<Alert
+					severity='error'
+					action={
+						<Button
+							color='inherit'
+							size='small'
+							onClick={() => window.location.reload()}>
+							Retry
+						</Button>
+					}>
+					{error?.message || 'Failed to load members.'}
 				</Alert>
-				<Button variant='contained' onClick={() => router.push('/members/')}>
-					Retry
-				</Button>
-			</Box>
+			</Container>
 		);
 	}
 
 	return (
-		<div className='m-5 bg-white p-2'>
-			{/* Search and Title Section */}
-			<div className='flex items-center justify-between'>
-				<div className='flex-1 flex justify-items-start'>
-					<div className='flex items-center gap-2 bg-gray-50 rounded-md ring-1 ring-gray-300 px-3 py-1 w-[260px] mb-2'>
-						<Image src='/search.png' alt='Search' width={16} height={16} />
-						<input
-							type='text'
-							value={filter}
-							onChange={(e) => setFilter(e.target.value)}
-							placeholder='Search…'
-							className='w-full bg-transparent outline-none text-sm px-2 py-1'
-						/>
-					</div>
-				</div>
-				<div className='hidden md:flex'>
-					<h1 className='text-[#0a0b0b] font-bold text-md'>
-						REGISTERED MEMBERS- {uniqueId}
-					</h1>
-				</div>
-			</div>
+		<Container maxWidth='xl' sx={{ py: 4 }}>
+			{/* Header & Search */}
+			<Stack
+				direction={{ xs: 'column', md: 'row' }}
+				justifyContent='space-between'
+				alignItems={{ xs: 'stretch', md: 'center' }}
+				spacing={2}
+				sx={{ mb: 3 }}>
+				<Box>
+					<Typography variant='h5' fontWeight='bold' color='#0a0b0b'>
+						Registered Members
+					</Typography>
+					<Typography variant='body2' color='text.secondary'>
+						ID: {uniqueId || 'N/A'}
+					</Typography>
+				</Box>
 
-			{/* Members Table */}
-			<TableContainer
-				component={Paper}
-				sx={{ width: '100%', overflowX: 'auto' }}>
-				<Table aria-label='members table' sx={{ minWidth: 640 }}>
-					<TableHead sx={{ background: '#c4c7d4', color: 'white' }}>
-						<TableRow>
-							{TABLE_HEADERS.map(
-								(header) =>
-									(!isMobile || !header.mobile) && (
-										<StyledTableCell key={header.id}>
-											{header.label}
-										</StyledTableCell>
-									)
-							)}
-						</TableRow>
-					</TableHead>
+				<TextField
+					placeholder='Search by name or email...'
+					size='small'
+					value={filter}
+					onChange={(e) => setFilter(e.target.value)}
+					sx={{ width: { xs: '100%', md: 300 }, bgcolor: 'background.paper' }}
+					slotProps={{
+						startAdornment: (
+							<InputAdornment position='start'>
+								<SearchIcon color='action' />
+							</InputAdornment>
+						),
+					}}
+				/>
+			</Stack>
 
-					<TableBody>
-						{paginatedUsers.map((user) => (
-							<StyledTableRow key={user.id}>
-								{/* Member Info */}
-								<StyledTableCell>
-									<MemberInfoCell
-										member={{
+			{/* Content Area */}
+			{paginatedUsers.length === 0 ? (
+				<Alert severity='info' variant='outlined'>
+					No registered members found matching your search.
+				</Alert>
+			) : (
+				<>
+					{/* Mobile View: Cards */}
+					{isMobile ? (
+						<Box>
+							{paginatedUsers.map((user) => (
+								<MobileMemberCard
+									key={user.id}
+									member={user}
+									canEdit={role === 'admin' || uniqueId === user.nationalId}
+									onView={handleViewClick}
+									onEdit={handleEditClick}
+									onDelete={() =>
+										handleDeleteClick({
 											id: user.id,
-											middleName: user.middleName,
 											firstName: user.firstName,
 											lastName: user.lastName,
-											declaration: user.declaration,
-											email: user.email,
-										}}
-									/>
-									{isMobile &&
-										(role === 'admin' || uniqueId === user.nationalId) && (
-											<Box
-												sx={{
-													display: 'flex',
-													gap: 0.5,
-												}}>
-												<IconButton
-													aria-label='view'
-													color='secondary'
-													size='sm'
-													onClick={() => handleViewClick(user.id)}>
-													<PreviewRoundedIcon />
-												</IconButton>
-
-												<IconButton
-													aria-label='edit'
-													color='primary'
-													size='sm'
-													onClick={() => handleEditClick(user.id)}>
-													<EditIcon />
-												</IconButton>
-
-												<IconButton
-													aria-label='delete'
-													color='error'
-													size='sm'
-													onClick={() =>
-														handleDeleteClick({
+										})
+									}
+								/>
+							))}
+						</Box>
+					) : (
+						/* Desktop View: Table */
+						<TableContainer
+							component={Paper}
+							elevation={2}
+							sx={{ borderRadius: 2 }}>
+							<Table sx={{ minWidth: 700 }} aria-label='customized table'>
+								<TableHead>
+									<TableRow>
+										<StyledTableCell>Name</StyledTableCell>
+										<StyledTableCell>Gender</StyledTableCell>
+										<StyledTableCell>Email</StyledTableCell>
+										<StyledTableCell>Telephone</StyledTableCell>
+										<StyledTableCell>Status</StyledTableCell>
+										<StyledTableCell align='center'>Actions</StyledTableCell>
+									</TableRow>
+								</TableHead>
+								<TableBody>
+									{paginatedUsers.map((user) => {
+										const canEdit =
+											role === 'admin' || uniqueId === user.nationalId;
+										return (
+											<StyledTableRow key={user.id}>
+												<StyledTableCell>
+													<Box display='flex' alignItems='center' gap={2}>
+														<Avatar
+															src='/defaultPhoto.png'
+															sx={{ width: 32, height: 32 }}
+														/>
+														<Box>
+															<Typography variant='subtitle2' fontWeight='bold'>
+																{user.lastName} {user.firstName}
+															</Typography>
+															<Typography
+																variant='caption'
+																color='text.secondary'>
+																{user.middleName}
+															</Typography>
+														</Box>
+													</Box>
+												</StyledTableCell>
+												<StyledTableCell>{user.gender}</StyledTableCell>
+												<StyledTableCell>{user.email}</StyledTableCell>
+												<StyledTableCell>{user.telephone}</StyledTableCell>
+												<StyledTableCell>
+													<StatusChip
+														declaration={user.declaration}
+														size='small'
+													/>
+												</StyledTableCell>
+												<StyledTableCell align='center'>
+													<ActionGroup
+														memberId={user.id}
+														canEdit={canEdit}
+														onView={handleViewClick}
+														onEdit={handleEditClick}
+														onDelete={handleDeleteClick}
+														memberData={{
 															id: user.id,
 															firstName: user.firstName,
 															lastName: user.lastName,
-														})
-													}>
-													<DeleteIcon />
-												</IconButton>
-											</Box>
-										)}
-								</StyledTableCell>
+														}}
+													/>
+												</StyledTableCell>
+											</StyledTableRow>
+										);
+									})}
+								</TableBody>
+							</Table>
+						</TableContainer>
+					)}
 
-								{/* Additional Columns (hidden on mobile) */}
-								{!isMobile && (
-									<>
-										<StyledTableCell>{user.gender}</StyledTableCell>
-										<StyledTableCell sx={{ wordBreak: 'break-all' }}>
-											{user.email}
-										</StyledTableCell>
-										<StyledTableCell sx={{ wordBreak: 'break-all' }}>
-											{user.telephone}
-										</StyledTableCell>
-										<StyledTableCell>
-											<StatusChip declaration={user.declaration} />
-										</StyledTableCell>
-									</>
-								)}
+					{/* Pagination (Common for both views) */}
+					<TablePagination
+						component='div'
+						count={filteredList.length}
+						page={page}
+						onPageChange={handleChangePage}
+						rowsPerPage={rowsPerPage}
+						onRowsPerPageChange={handleChangeRowsPerPage}
+						rowsPerPageOptions={[5, 10, 25]}
+						sx={{ mt: 1 }}
+					/>
+				</>
+			)}
 
-								{/* Actions */}
-								<StyledTableCell>
-									{(role === 'admin' || uniqueId === user.nationalId) && (
-										<Box
-											sx={{
-												display: 'flex',
-												gap: 1,
-											}}>
-											<Tooltip title='view'>
-												<ActionButton
-													onClick={() => handleViewClick(user.id)}
-													icon={PreviewRoundedIcon}
-													color='#CC6CE7'
-													label='View'
-												/>
-											</Tooltip>
-											<Tooltip title='edit'>
-												<ActionButton
-													onClick={() => handleEditClick(user.id)}
-													icon={EditIcon}
-													color='#060270'
-													label='Edit'
-												/>
-											</Tooltip>
-											<Tooltip title='delete'>
-												<ActionButton
-													onClick={() =>
-														handleDeleteClick({
-															id: user.id,
-															firstName: user.firstName,
-															lastName: user.lastName,
-														})
-													}
-													icon={DeleteIcon}
-													color='#D20103'
-													label='Delete'
-												/>
-											</Tooltip>
-										</Box>
-									)}
-								</StyledTableCell>
-							</StyledTableRow>
-						))}
-						{paginatedUsers.length === 0 && (
-							<TableRow>
-								<TableCell colSpan={6} align='center'>
-									{' '}
-									<Alert severity='info'>No Registered Members Found.</Alert>
-								</TableCell>
-							</TableRow>
-						)}
-					</TableBody>
-				</Table>
-
-				<TablePagination
-					component='div'
-					count={filteredList.length}
-					page={page}
-					onPageChange={handleChangePage}
-					rowsPerPage={rowsPerPage}
-					onRowsPerPageChange={handleChangeRowsPerPage}
-					rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-				/>
-			</TableContainer>
-
-			{/* Confirm Delete  */}
-			<Dialog open={confirmDialogOpen} onClose={handleCancelDelete}>
-				<DialogTitle>Confirm Deletion</DialogTitle>
-				<DialogContent>
+			{/* Confirm Delete Dialog */}
+			<Dialog
+				open={confirmDialogOpen}
+				onClose={handleCancelDelete}
+				maxWidth='xs'
+				fullWidth>
+				<DialogTitle
+					sx={{
+						bgcolor: '#ffebee',
+						color: '#D20103',
+						display: 'flex',
+						alignItems: 'center',
+						gap: 1,
+					}}>
+					<DeleteIcon /> Confirm Deletion
+				</DialogTitle>
+				<DialogContent sx={{ mt: 2 }}>
 					<DialogContentText>
 						Are you sure you want to delete{' '}
 						<strong>
-							{`${selectedUser?.firstName} ${selectedUser?.lastName}`}{' '}
+							{selectedUser?.firstName} {selectedUser?.lastName}
 						</strong>
-						? This action cannot be undone.
+						?
+						<br />
+						<br />
+						This action cannot be undone.
 					</DialogContentText>
 				</DialogContent>
-				<DialogActions>
-					<Button onClick={handleCancelDelete}>Cancel</Button>
-					<Button color='error' onClick={handleConfirmDelete}>
+				<DialogActions sx={{ p: 2 }}>
+					<Button
+						onClick={handleCancelDelete}
+						variant='outlined'
+						color='inherit'>
+						Cancel
+					</Button>
+					<Button
+						onClick={handleConfirmDelete}
+						variant='contained'
+						color='error'
+						autoFocus>
 						Delete Record
 					</Button>
 				</DialogActions>
 			</Dialog>
-		</div>
+		</Container>
 	);
 }
