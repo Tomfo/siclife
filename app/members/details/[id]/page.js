@@ -1,386 +1,438 @@
-"use client";
-import { getMemberbyId } from "@/helpers/api-request";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { useEffect, useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
-import EditIcon from "@mui/icons-material/Edit";
-import PrintIcon from "@mui/icons-material/Print";
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import Link from "next/link";
-import { useUserStore } from "@/app/store/userStore";
-import { useReactToPrint } from "react-to-print";
-import html2canvas from "html2canvas-pro";
-import { jsPDF } from "jspdf";
-import Image from "next/image";
+'use client';
+
+import { getMemberbyId } from '@/helpers/api-request';
+import { useQuery } from '@tanstack/react-query';
+import { useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useUserStore } from '@/app/store/userStore';
+import html2canvas from 'html2canvas-pro';
+import { jsPDF } from 'jspdf';
+import Image from 'next/image';
+
+// MUI Icons
+import EditIcon from '@mui/icons-material/Edit';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import PersonIcon from '@mui/icons-material/Person';
+import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
+import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+
+// MUI Components
 import {
-  Typography,
-  Grid,
-  Box,
-  Divider,
-  Paper,
-  Chip,
-  Stack,
-  IconButton,
-  CircularProgress,
-  Alert,
-  Button,
-  Tooltip,
-} from "@mui/material";
+	Typography,
+	Grid,
+	Box,
+	Divider,
+	Paper,
+	Chip,
+	Stack,
+	CircularProgress,
+	Alert,
+	Button,
+	Tooltip,
+	Container,
+	Avatar,
+	Card,
+	CardContent,
+} from '@mui/material';
 
-// --- Section Title Component ---
-function SectionTitle({ children }) {
-  return (
-    <Typography
-      variant="h6"
-      sx={{
-        color: "#00ACAC",
-        fontWeight: "bold",
-        mt: 3,
-        mb: 1,
-        borderBottom: "1px solid #e0e0e0",
-        pb: 1,
-      }}
-    >
-      {children}
-    </Typography>
-  );
+// --- Custom Components ---
+
+function SectionTitle({ icon, children }) {
+	return (
+		<Box sx={{ mt: 4, mb: 2 }}>
+			<Stack direction='row' alignItems='center' spacing={1} sx={{ mb: 1 }}>
+				{icon && <Box sx={{ color: '#00ACAC' }}>{icon}</Box>}
+				<Typography
+					variant='h6'
+					sx={{
+						color: '#00ACAC',
+						fontWeight: 'bold',
+						textTransform: 'uppercase',
+						fontSize: '1rem',
+						letterSpacing: '0.5px',
+					}}>
+					{children}
+				</Typography>
+			</Stack>
+			<Divider sx={{ borderColor: 'rgba(0, 172, 172, 0.3)' }} />
+		</Box>
+	);
 }
 
-// --- Field Display Component ---
-function FieldDisplay({ label, value }) {
-  return (
-    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-      <Typography variant="subtitle2" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography
-        variant="body1"
-        sx={{ fontWeight: 500, wordBreak: "break-word" }}
-      >
-        {value || <span style={{ color: "#aaa" }}>—</span>}
-      </Typography>
-    </Grid>
-  );
-}
-
-// --- Array Field Display ---
-function ArrayFieldDisplay({ label, items, renderItem }) {
-  return (
-    <>
-      {items && items.length > 0 ? (
-        <Stack spacing={1} sx={{ mb: 2 }}>
-          {items.map((item, idx) => (
-            <Paper
-              variant="outlined"
-              key={idx}
-              sx={{ p: 2, bgcolor: "#fafbfc" }}
-            >
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                sx={{ mb: 1 }}
-              >
-                {label} {items.length > 1 ? idx + 1 : ""}
-              </Typography>
-              {renderItem(item, idx)}
-            </Paper>
-          ))}
-        </Stack>
-      ) : (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          No {label?.toLowerCase()} dependants.
-        </Typography>
-      )}
-    </>
-  );
+function FieldDisplay({ label, value, fullWidth = false }) {
+	return (
+		<Box sx={{ mb: 2 }}>
+			<Typography
+				variant='caption'
+				display='block'
+				sx={{ color: 'text.secondary', mb: 0.5, fontWeight: 500 }}>
+				{label}
+			</Typography>
+			<Typography
+				variant='body1'
+				sx={{
+					fontWeight: 600,
+					color: 'text.primary',
+					wordBreak: 'break-word',
+					minHeight: '24px',
+				}}>
+				{value || (
+					<span style={{ color: '#bdbdbd', fontStyle: 'italic' }}>
+						Not Provided
+					</span>
+				)}
+			</Typography>
+		</Box>
+	);
 }
 
 // --- Main View Component ---
 export default function MemberViewPage() {
-  const router = useRouter();
-  const setUser = useUserStore((state) => state.setUser);
-  const params = useParams();
-  const { id } = useUserStore((state) => state.user);
-  const componentRef = useRef();
+	const router = useRouter();
+	const setUser = useUserStore((state) => state.setUser);
+	// const params = useParams(); // Unused in original logic, but kept if needed
+	const { id } = useUserStore((state) => state.user);
+	const componentRef = useRef();
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["getmembersbyId", id],
-    queryFn: () => getMemberbyId(id),
-    enabled: !!id, // only run if id is truthy
-  });
+	const { data, isLoading, error } = useQuery({
+		queryKey: ['getmembersbyId', id],
+		queryFn: () => getMemberbyId(id),
+		enabled: !!id,
+	});
 
-  // Handle user Edit
-  const handleEditClick = (recordId) => {
-    const user = { id: recordId };
-    setUser(user);
-    router.push("/members/edit/record");
-  };
+	// Handle user Edit
+	const handleEditClick = (recordId) => {
+		const user = { id: recordId };
+		setUser(user);
+		router.push('/members/edit/record');
+	};
 
-  const handleGeneratePdf = async () => {
-    const element = componentRef.current;
+	const handleGeneratePdf = async () => {
+		const element = componentRef.current;
+		if (!element) return;
 
-    if (!element) return;
+		// Optional: Add a loading state here if generation takes time
+		try {
+			const canvas = await html2canvas(element, {
+				scale: 2,
+				useCORS: true,
+				backgroundColor: '#ffffff', // Ensure white background for PDF
+			});
 
-    const canvas = await html2canvas(element, {
-      scale: 2, // improve quality
-      useCORS: true,
-      backgroundColor: null, // transparent background
-    });
+			const imgData = canvas.toDataURL('image/png');
+			const pdf = new jsPDF('p', 'px', [canvas.width, canvas.height]);
 
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "px", [canvas.width, canvas.height]);
+			pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+			pdf.save(`Member_Registration_${data?.nationalId || 'record'}.pdf`);
+		} catch (err) {
+			console.error('PDF Generation failed', err);
+			alert('Failed to generate PDF');
+		}
+	};
 
-    pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-    pdf.save(`Member_Registration_${data?.nationalId || "record"}.pdf`);
-  };
+	if (isLoading) {
+		return (
+			<Box
+				display='flex'
+				flexDirection='column'
+				alignItems='center'
+				justifyContent='center'
+				minHeight='50vh'>
+				<CircularProgress sx={{ color: '#00ACAC' }} />
+				<Typography sx={{ mt: 2, color: 'text.secondary' }}>
+					Loading Record...
+				</Typography>
+			</Box>
+		);
+	}
 
-  if (isLoading) {
-    return (
-      <Box display="flex" justifyContent="center" mt={4}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+	if (error) {
+		return (
+			<Container maxWidth='sm' sx={{ mt: 8 }}>
+				<Alert severity='error' variant='filled'>
+					{error.message || 'An error occurred while fetching the record.'}
+				</Alert>
+			</Container>
+		);
+	}
 
-  if (error) {
-    return (
-      <Box mt={4} textAlign="center">
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error.message}
-        </Alert>
-        {/* <Button variant="contained" onClick={fetchUser}>
-          Retry
-        </Button> */}
-      </Box>
-    );
-  }
+	if (!data) {
+		return (
+			<Container maxWidth='sm' sx={{ mt: 8 }}>
+				<Alert severity='info' variant='outlined'>
+					Record not Found.
+				</Alert>
+			</Container>
+		);
+	}
 
-  if (!data) {
-    return (
-      <Box mt={4} textAlign="center">
-        <Alert severity="info">Record not Found.</Alert>
-      </Box>
-    );
-  }
+	return (
+		<Container maxWidth='md' sx={{ py: 4 }}>
+			{/* Action Buttons */}
+			<Stack
+				direction='row'
+				justifyContent='flex-end'
+				spacing={2}
+				sx={{ mb: 3 }}
+				className='no-print'>
+				<Tooltip title='Modify member details'>
+					<Button
+						onClick={() => handleEditClick(id)}
+						variant='outlined'
+						color='success'
+						startIcon={<EditIcon />}
+						sx={{ borderRadius: 2 }}>
+						Edit
+					</Button>
+				</Tooltip>
+				<Tooltip title='Download as PDF'>
+					<Button
+						onClick={handleGeneratePdf}
+						variant='contained'
+						color='error'
+						startIcon={<PictureAsPdfIcon />}
+						sx={{ borderRadius: 2, boxShadow: 2 }}>
+						Download PDF
+					</Button>
+				</Tooltip>
+			</Stack>
 
-  return (
-    <>
-      {/* Print and PDF buttons (will be hidden when printing) */}
-      <Box
-        className="no-print"
-        sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mb: 2 }}
-      >
-        <Tooltip title="Edit details">
-          <Button
-            onClick={() => handleEditClick(id)}
-            color="success"
-            variant="contained"
-          >
-            <EditIcon />
-            Edit Details
-          </Button>
-        </Tooltip>
-        <Tooltip title="Download PDF">
-          <Button onClick={handleGeneratePdf} color="error" variant="contained">
-            <PictureAsPdfIcon />
-            Download Details
-          </Button>
-        </Tooltip>
-      </Box>
+			{/* Printable Document Area */}
+			<Paper
+				ref={componentRef}
+				elevation={3}
+				sx={{
+					p: { xs: 3, sm: 5 },
+					bgcolor: 'background.paper',
+					borderRadius: 1,
+					borderTop: '6px solid #00ACAC', // Brand color accent
+				}}>
+				{/* Header Section */}
+				<Box
+					sx={{
+						display: 'flex',
+						flexDirection: { xs: 'column', sm: 'row' },
+						alignItems: 'center',
+						justifyContent: 'space-between',
+						gap: 2,
+						mb: 4,
+						borderBottom: '2px solid #f0f0f0',
+						pb: 3,
+					}}>
+					<Avatar
+						src='/moba.png'
+						alt='Logo'
+						sx={{ width: 80, height: 80, boxShadow: 1 }}
+					/>
+					<Typography
+						variant='h4'
+						align='center'
+						sx={{
+							fontWeight: 800,
+							fontSize: { xs: '1.2rem', sm: '1.5rem' },
+							color: '#091b1b',
+							textTransform: 'uppercase',
+							maxWidth: '600px',
+						}}>
+						MOBA 86 SIC Life Policy Registration Information
+					</Typography>
+				</Box>
 
-      <Box
-        ref={componentRef}
-        sx={{
-          m: 2,
-          p: { xs: 1, sm: 3 },
-          bgcolor: "background.paper",
+				{/* 1. Identification Details */}
+				<SectionTitle icon={<PersonIcon />}>
+					Identification Details
+				</SectionTitle>
+				<Grid container spacing={3}>
+					<Grid item xs={12} sm={6}>
+						<FieldDisplay label='National ID Number' value={data.nationalId} />
+					</Grid>
+					<Grid item xs={12} sm={6}>
+						<FieldDisplay label='Type of ID' value={data.idType} />
+					</Grid>
+				</Grid>
 
-          width: "800px",
-          mx: "auto",
-        }}
-      >
-        {/* Title */}
-        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
-          <Image
-            src="/moba.png"
-            alt="Logo"
-            width={36}
-            height={36}
-            className="rounded-full"
-            style={{ width: 36, height: 36 }}
-            unoptimized
-          />
-          <h1 className=" text-[#091b1b] font-bold justify-center text-2xl">
-            MOBA 86 SIC LIFE POLICY REGISTRATION INFORMATION
-          </h1>
-        </div>
+				{/* 2. Personal Details */}
+				<SectionTitle icon={<PersonIcon />}>Personal Details</SectionTitle>
+				<Grid container spacing={3}>
+					<Grid item xs={12} sm={4}>
+						<FieldDisplay label='First Name' value={data.firstName} />
+					</Grid>
+					<Grid item xs={12} sm={4}>
+						<FieldDisplay label='Middle Name' value={data.middleName} />
+					</Grid>
+					<Grid item xs={12} sm={4}>
+						<FieldDisplay label='Last Name' value={data.lastName} />
+					</Grid>
+					<Grid item xs={12} sm={4}>
+						<FieldDisplay
+							label='Date of Birth'
+							value={data.birthday?.split('T')[0]}
+						/>
+					</Grid>
+					<Grid item xs={12} sm={4}>
+						<FieldDisplay label='Gender' value={data.gender} />
+					</Grid>
+				</Grid>
 
-        {/* Identification Details */}
-        <SectionTitle>Identification Details</SectionTitle>
-        <table style={{ width: "100%", marginBottom: "16px" }}>
-          <tbody>
-            <tr>
-              <td style={{ width: "50%", padding: "8px" }}>
-                <FieldDisplay label="National ID" value={data.nationalId} />
-              </td>
-              <td style={{ width: "50%", padding: "8px" }}>
-                <FieldDisplay label="Type of ID" value={data.idType} />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+				{/* 3. Contact Details */}
+				<SectionTitle icon={<ContactPhoneIcon />}>Contact Details</SectionTitle>
+				<Grid container spacing={3}>
+					<Grid item xs={12} sm={6} md={4}>
+						<FieldDisplay label='Email Address' value={data.email} />
+					</Grid>
+					<Grid item xs={12} sm={6} md={4}>
+						<FieldDisplay label='Telephone' value={data.telephone} />
+					</Grid>
+					<Grid item xs={12} sm={12} md={4}>
+						<FieldDisplay label='Residential Address' value={data.residence} />
+					</Grid>
+				</Grid>
 
-        {/* Personal Details */}
-        <SectionTitle>Personal Details</SectionTitle>
-        <table style={{ width: "100%", marginBottom: "16px" }}>
-          <tbody>
-            <tr>
-              <td style={{ width: "33%", padding: "8px" }}>
-                <FieldDisplay label="First Name" value={data.firstName} />
-              </td>
-              <td style={{ width: "33%", padding: "8px" }}>
-                <FieldDisplay label="Middle Name" value={data.middleName} />
-              </td>
-              <td style={{ width: "33%", padding: "8px" }}>
-                <FieldDisplay label="Last Name" value={data.lastName} />
-              </td>
-            </tr>
-            <tr>
-              <td style={{ padding: "8px" }}>
-                <FieldDisplay
-                  label="Birthday (yyyy-mm-dd)"
-                  value={data.birthday.split("T")[0]}
-                />
-              </td>
-              <td style={{ padding: "8px" }}>
-                <FieldDisplay label="Gender" value={data.gender} />
-              </td>
-              <td style={{ padding: "8px" }}></td>
-            </tr>
-          </tbody>
-        </table>
+				{/* 4. Spouse Details */}
+				<SectionTitle icon={<FamilyRestroomIcon />}>
+					Spouse Details
+				</SectionTitle>
+				<Grid container spacing={3}>
+					<Grid item xs={12} sm={8}>
+						<FieldDisplay
+							label='Spouse Full Name'
+							value={data.spouseFullname}
+						/>
+					</Grid>
+					<Grid item xs={12} sm={4}>
+						<FieldDisplay
+							label='Spouse Date of Birth'
+							value={data.spousebirthday?.split('T')[0]}
+						/>
+					</Grid>
+				</Grid>
 
-        {/* Contact Details */}
-        <SectionTitle>Contact Details</SectionTitle>
-        <table style={{ width: "100%", marginBottom: "16px" }}>
-          <tbody>
-            <tr>
-              <td style={{ width: "33%", padding: "8px" }}>
-                <FieldDisplay label="Email" value={data.email} />
-              </td>
-              <td style={{ width: "33%", padding: "8px" }}>
-                <FieldDisplay label="Telephone" value={data.telephone} />
-              </td>
-              <td style={{ width: "33%", padding: "8px" }}>
-                <FieldDisplay label="Address" value={data.residence} />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+				{/* 5. Children Details */}
+				<SectionTitle icon={<FamilyRestroomIcon />}>
+					Children Details
+				</SectionTitle>
+				{data.children && data.children.length > 0 ? (
+					<Stack spacing={2}>
+						{data.children.map((child, idx) => (
+							<Card key={idx} variant='outlined' sx={{ bgcolor: '#fafbfc' }}>
+								<CardContent sx={{ py: 2, pb: '16px !important' }}>
+									<Grid container spacing={2} alignItems='center'>
+										<Grid item xs={1}>
+											<Typography variant='subtitle2' color='primary'>
+												#{idx + 1}
+											</Typography>
+										</Grid>
+										<Grid item xs={12} sm={7}>
+											<FieldDisplay
+												label='Child Full Name'
+												value={child.fullName}
+											/>
+										</Grid>
+										<Grid item xs={12} sm={4}>
+											<FieldDisplay
+												label='Date of Birth'
+												value={child.birthday?.split('T')[0]}
+											/>
+										</Grid>
+									</Grid>
+								</CardContent>
+							</Card>
+						))}
+					</Stack>
+				) : (
+					<Typography variant='body2' color='text.secondary' fontStyle='italic'>
+						No children listed.
+					</Typography>
+				)}
 
-        {/* Spouse Details */}
-        <SectionTitle>Spouse Details</SectionTitle>
-        <table style={{ width: "100%", marginBottom: "16px" }}>
-          <tbody>
-            <tr>
-              <td style={{ width: "50%", padding: "8px" }}>
-                <FieldDisplay label="Full Name" value={data.spouseFullname} />
-              </td>
-              <td style={{ width: "50%", padding: "8px" }}>
-                <FieldDisplay
-                  label="Birthday (yyyy-mm-dd)"
-                  value={data.spousebirthday.split("T")[0]}
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+				{/* 6. Parent Details */}
+				<SectionTitle icon={<FamilyRestroomIcon />}>
+					Parent Details
+				</SectionTitle>
+				{data.parents && data.parents.length > 0 ? (
+					<Stack spacing={2}>
+						{data.parents.map((parent, idx) => (
+							<Card key={idx} variant='outlined' sx={{ bgcolor: '#fafbfc' }}>
+								<CardContent sx={{ py: 2, pb: '16px !important' }}>
+									<Grid container spacing={2} alignItems='center'>
+										<Grid item xs={1}>
+											<Typography variant='subtitle2' color='primary'>
+												#{idx + 1}
+											</Typography>
+										</Grid>
+										<Grid item xs={12} sm={5}>
+											<FieldDisplay
+												label='Parent Full Name'
+												value={parent.fullName}
+											/>
+										</Grid>
+										<Grid item xs={12} sm={3}>
+											<FieldDisplay
+												label='Date of Birth'
+												value={parent.birthday?.split('T')[0]}
+											/>
+										</Grid>
+										<Grid item xs={12} sm={3}>
+											<FieldDisplay
+												label='Relationship'
+												value={parent.relationship}
+											/>
+										</Grid>
+									</Grid>
+								</CardContent>
+							</Card>
+						))}
+					</Stack>
+				) : (
+					<Typography variant='body2' color='text.secondary' fontStyle='italic'>
+						No parents listed.
+					</Typography>
+				)}
 
-        {/* Children Details */}
-        <SectionTitle>Children Details</SectionTitle>
-        <ArrayFieldDisplay
-          items={data.children}
-          renderItem={(child, idx) => (
-            <table style={{ width: "100%", marginBottom: "8px" }}>
-              <tbody>
-                <tr>
-                  <td style={{ width: "50%", padding: "8px" }}>
-                    <FieldDisplay label="Full Name" value={child.fullName} />
-                  </td>
-                  <td style={{ width: "50%", padding: "8px" }}>
-                    <FieldDisplay
-                      label="Birthday (yyyy-mm-dd)"
-                      value={child.birthday.split("T")[0]}
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          )}
-        />
-
-        {/* Parent Details */}
-        <SectionTitle>Parent Details</SectionTitle>
-        <ArrayFieldDisplay
-          items={data.parents}
-          renderItem={(parent, idx) => (
-            <table style={{ width: "100%", marginBottom: "8px" }}>
-              <tbody>
-                <tr>
-                  <td style={{ width: "40%", padding: "8px" }}>
-                    <FieldDisplay label="Full Name" value={parent.fullName} />
-                  </td>
-                  <td style={{ width: "30%", padding: "8px" }}>
-                    <FieldDisplay
-                      label="Birthday (yyyy-mm-dd)"
-                      value={parent.birthday.split("T")[0]}
-                    />
-                  </td>
-                  <td style={{ width: "30%", padding: "8px" }}>
-                    <FieldDisplay
-                      label="Relation"
-                      value={parent.relationship}
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          )}
-        />
-
-        {/* Undertaking */}
-        <SectionTitle>Undertaking</SectionTitle>
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ fontStyle: "italic" }}>
-            Ongoing illness/condition:{" "}
-            <Chip
-              label={data.underlying ? "Yes" : "No"}
-              color={data.underlying ? "warning" : "default"}
-              size="small"
-              sx={{ ml: 1 }}
-            />
-          </Typography>
-          {data.underlying && (
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Known Health Conditions:{" "}
-              {data.condition || (
-                <span style={{ color: "#aaa" }}>None specified</span>
-              )}
-            </Typography>
-          )}
-        </Box>
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ fontStyle: "italic" }}>
-            Declaration Accepted:{" "}
-            <Chip
-              label={data.declaration ? "Yes" : "No"}
-              color={data.declaration ? "success" : "default"}
-              size="small"
-              sx={{ ml: 1 }}
-            />
-          </Typography>
-        </Box>
-      </Box>
-    </>
-  );
+				{/* 7. Undertaking / Health */}
+				<SectionTitle icon={<HealthAndSafetyIcon />}>
+					Undertaking & Health
+				</SectionTitle>
+				<Box sx={{ bgcolor: '#f5fbfb', p: 3, borderRadius: 2 }}>
+					<Grid container spacing={3}>
+						<Grid item xs={12} sm={6}>
+							<Box>
+								<Typography variant='subtitle2' color='text.secondary'>
+									Declaration Accepted
+								</Typography>
+								<Chip
+									label={data.declaration ? 'Accepted' : 'Not Accepted'}
+									color={data.declaration ? 'success' : 'default'}
+									sx={{ mt: 1, fontWeight: 'bold' }}
+								/>
+							</Box>
+						</Grid>
+						<Grid item xs={12} sm={6}>
+							<Box>
+								<Typography variant='subtitle2' color='text.secondary'>
+									Underlying Condition
+								</Typography>
+								<Chip
+									label={data.underlying ? 'Yes' : 'No'}
+									color={data.underlying ? 'warning' : 'success'}
+									sx={{ mt: 1, fontWeight: 'bold' }}
+								/>
+							</Box>
+						</Grid>
+						{data.underlying && (
+							<Grid item xs={12}>
+								<Divider sx={{ my: 1 }} />
+								<Typography variant='subtitle2' color='error' sx={{ mb: 1 }}>
+									Specific Medical Condition:
+								</Typography>
+								<Typography variant='body1'>{data.condition}</Typography>
+							</Grid>
+						)}
+					</Grid>
+				</Box>
+			</Paper>
+		</Container>
+	);
 }
