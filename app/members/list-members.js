@@ -138,7 +138,11 @@ function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
 				{canEdit && (
 					<>
 						<Divider sx={{ my: 1 }} />
-						<Box display='flex' justifyContent='flex-end' gap={1}>
+						<Box
+							display='flex'
+							justifyContent='flex-end'
+							gap={1}
+							bgcolor='#fafafa'>
 							<Button
 								size='small'
 								color='secondary'
