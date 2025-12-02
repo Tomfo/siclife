@@ -485,6 +485,7 @@ export default function ListMembers() {
 						rowsPerPage={rowsPerPage}
 						onRowsPerPageChange={handleChangeRowsPerPage}
 						rowsPerPageOptions={[5, 10, 25]}
+						labelRowsPerPage='Show Rows'
 						sx={{ mt: 1 }}
 					/>
 				</>
