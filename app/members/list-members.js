@@ -423,7 +423,7 @@ export default function ListMembers() {
 								<TableHead>
 									<TableRow>
 										<StyledTableCell>Name</StyledTableCell>
-										<StyledTableCell>Gender</StyledTableCell>
+										{/* <StyledTableCell>Gender</StyledTableCell> */}
 										<StyledTableCell>Email</StyledTableCell>
 										<StyledTableCell>Telephone</StyledTableCell>
 										<StyledTableCell>Status</StyledTableCell>
@@ -454,7 +454,7 @@ export default function ListMembers() {
 														</Box>
 													</Box>
 												</StyledTableCell>
-												<StyledTableCell>{user.gender}</StyledTableCell>
+												{/* <StyledTableCell>{user.gender}</StyledTableCell> */}
 												<StyledTableCell>{user.email}</StyledTableCell>
 												<StyledTableCell>{user.telephone}</StyledTableCell>
 												<StyledTableCell>
