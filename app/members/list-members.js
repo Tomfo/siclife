@@ -32,7 +32,7 @@ import {
 	Chip,
 	Tooltip,
 	Avatar,
-	TablePagination,
+	Pagination, // Changed from TablePagination
 	Box,
 	Typography,
 	Alert,
@@ -50,13 +50,14 @@ import {
 	Card,
 	CardContent,
 	Divider,
-	Grid,
+	Select,
+	MenuItem,
 } from '@mui/material';
 
 // --- Styled Components ---
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
 	[`&.${TableCell.head}`]: {
-		backgroundColor: '#00ACAC', // Brand Color
+		backgroundColor: '#00ACAC',
 		color: theme.palette.common.white,
 		fontWeight: 600,
 	},
@@ -70,7 +71,7 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 		backgroundColor: theme.palette.action.hover,
 	},
 	'&:hover': {
-		backgroundColor: 'rgba(0, 172, 172, 0.08)', // Subtle hover effect
+		backgroundColor: 'rgba(0, 172, 172, 0.08)',
 	},
 	'&:last-child td, &:last-child th': {
 		border: 0,
@@ -79,7 +80,7 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 
 // --- Helper Sub-Components ---
 
-// 1. Mobile Card View (shown only on small screens)
+// 1. Mobile Card View
 function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
 	return (
 		<Card variant='outlined' sx={{ mb: 2, borderRadius: 2 }}>
@@ -99,7 +100,7 @@ function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
 							<Typography variant='subtitle1' fontWeight='bold'>
 								{member.lastName}
 							</Typography>
-							<Typography variant='caption' color='text.secondary'>
+							<Typography variant='caption'>
 								{member.firstName} {member.middleName || ''}
 							</Typography>
 						</Box>
@@ -124,14 +125,14 @@ function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
 							{member.telephone}
 						</Typography>
 					</Box>
-					<Box display='flex' justifyContent='space-between'>
+					{/* <Box display='flex' justifyContent='space-between'>
 						<Typography variant='body2' color='text.secondary'>
 							Gender:
 						</Typography>
 						<Typography variant='body2' fontWeight={500}>
 							{member.gender}
 						</Typography>
-					</Box>
+					</Box> */}
 				</Stack>
 
 				{canEdit && (
@@ -140,6 +141,7 @@ function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
 						<Box display='flex' justifyContent='flex-end' gap={1}>
 							<Button
 								size='small'
+								color='secondary'
 								startIcon={<PreviewRoundedIcon />}
 								onClick={() => onView(member.id)}>
 								View
@@ -234,8 +236,8 @@ export default function ListMembers() {
 	// Dialog & Pagination State
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-	const [page, setPage] = useState(0);
-	const [rowsPerPage, setRowsPerPage] = useState(10);
+	const [page, setPage] = useState(0); // 0-based index for logic
+	const [rowsPerPage, setRowsPerPage] = useState(15);
 
 	// Auth & Store
 	const { user } = useUser();
@@ -269,7 +271,10 @@ export default function ListMembers() {
 		return filteredList.slice(start, start + rowsPerPage);
 	}, [filteredList, page, rowsPerPage]);
 
-	const handleChangePage = (_, newPage) => setPage(newPage);
+	const handleChangePage = (event, value) => {
+		setPage(value - 1); // Pagination component gives 1-based index, convert to 0-based
+	};
+
 	const handleChangeRowsPerPage = (event) => {
 		setRowsPerPage(parseInt(event.target.value, 10));
 		setPage(0);
@@ -367,7 +372,7 @@ export default function ListMembers() {
 					value={filter}
 					onChange={(e) => setFilter(e.target.value)}
 					sx={{ width: { xs: '100%', md: 300 }, bgcolor: 'background.paper' }}
-					slotProps={{
+					InputProps={{
 						startAdornment: (
 							<InputAdornment position='start'>
 								<SearchIcon color='action' />
@@ -476,18 +481,42 @@ export default function ListMembers() {
 						</TableContainer>
 					)}
 
-					{/* Pagination (Common for both views) */}
-					<TablePagination
-						component='div'
-						count={filteredList.length}
-						page={page}
-						onPageChange={handleChangePage}
-						rowsPerPage={rowsPerPage}
-						onRowsPerPageChange={handleChangeRowsPerPage}
-						rowsPerPageOptions={[5, 10, 25]}
-						labelRowsPerPage='Show Rows'
-						sx={{ mt: 1 }}
-					/>
+					{/* NEW: Pagination with Rows Per Page Selector */}
+					<Stack
+						direction={{ xs: 'column', sm: 'row' }}
+						spacing={2}
+						justifyContent='space-between'
+						alignItems='center'
+						sx={{ mt: 3 }}>
+						{/* Rows Per Page (Manual Implementation) */}
+						{/* <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+							<Typography variant='body2' color='text.secondary'>
+								Rows per page:
+							</Typography>
+							<Select
+								value={rowsPerPage}
+								onChange={handleChangeRowsPerPage}
+								size='small'
+								sx={{ height: 32, bgcolor: 'background.paper' }}>
+								<MenuItem value={5}>5</MenuItem>
+								<MenuItem value={10}>10</MenuItem>
+								<MenuItem value={25}>25</MenuItem>
+							</Select>
+						</Box> */}
+
+						{/* The Pagination Component */}
+						<Pagination
+							count={Math.ceil(filteredList.length / rowsPerPage)}
+							page={page + 1} // Convert 0-index (logic) to 1-index (UI)
+							onChange={handleChangePage}
+							variant='outlined'
+							color='secondary'
+							hidePrevButton
+							hideNextButton
+							showFirstButton
+							showLastButton
+						/>
+					</Stack>
 				</>
 			)}
 
