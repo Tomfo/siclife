@@ -509,10 +509,9 @@ export default function ListMembers() {
 							count={Math.ceil(filteredList.length / rowsPerPage)}
 							page={page + 1} // Convert 0-index (logic) to 1-index (UI)
 							onChange={handleChangePage}
-							variant='outlined'
-							color='secondary'
-							hidePrevButton
+							color='primary'
 							hideNextButton
+							hidePrevButton
 							showFirstButton
 							showLastButton
 						/>
