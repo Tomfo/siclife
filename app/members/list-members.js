@@ -100,7 +100,7 @@ function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
 								{member.lastName} {member.firstName}
 							</Typography>
 							<Typography variant='caption' color='text.secondary'>
-								{member.middleName}
+								{member.middleName || ''}
 							</Typography>
 						</Box>
 					</Box>
