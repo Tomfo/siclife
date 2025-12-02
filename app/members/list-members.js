@@ -427,7 +427,7 @@ export default function ListMembers() {
 										<StyledTableCell>Email</StyledTableCell>
 										<StyledTableCell>Telephone</StyledTableCell>
 										<StyledTableCell>Status</StyledTableCell>
-										<StyledTableCell align='center'>Actions</StyledTableCell>
+										<StyledTableCell>Actions</StyledTableCell>
 									</TableRow>
 								</TableHead>
 								<TableBody>
@@ -463,7 +463,7 @@ export default function ListMembers() {
 														size='small'
 													/>
 												</StyledTableCell>
-												<StyledTableCell align='center'>
+												<StyledTableCell>
 													<ActionGroup
 														memberId={user.id}
 														canEdit={canEdit}
