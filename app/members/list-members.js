@@ -97,10 +97,10 @@ function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
 						</Avatar>
 						<Box>
 							<Typography variant='subtitle1' fontWeight='bold'>
-								{member.lastName} {member.firstName}
+								{member.lastName}
 							</Typography>
 							<Typography variant='caption' color='text.secondary'>
-								{member.middleName || ''}
+								`${member.firstName} ${member.middleName || ''}`
 							</Typography>
 						</Box>
 					</Box>
