@@ -1,133 +1,291 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import AddIcon from '@mui/icons-material/Add';
-import { IconButton } from '@mui/material';
-import ListAltTwoToneIcon from '@mui/icons-material/ListAltTwoTone';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { usePathname } from 'next/navigation';
+
+// MUI Components
+import {
+	AppBar,
+	Toolbar,
+	Container,
+	Box,
+	Typography,
+	Button,
+	IconButton,
+	Drawer,
+	List,
+	ListItem,
+	ListItemButton,
+	ListItemIcon,
+	ListItemText,
+	Divider,
+	Stack,
+	useTheme,
+	useMediaQuery,
+} from '@mui/material';
+
+// Icons
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
-import Typography from '@mui/material/Typography';
-import { Button } from '@mui/material';
+import ListAltTwoToneIcon from '@mui/icons-material/ListAltTwoTone';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import LoginIcon from '@mui/icons-material/Login';
+
+// Clerk
 import {
-	ClerkProvider,
-	SignInButton,
-	SignUpButton,
 	SignedIn,
 	SignedOut,
 	UserButton,
 	useUser,
+	SignInButton, // Added for cleaner logic
 } from '@clerk/nextjs';
+
+// --- Configuration ---
+const NAV_LINKS = [
+	{ label: 'List Members', href: '/members', icon: <ListAltTwoToneIcon /> },
+	{ label: 'Add New Member', href: '/members/create', icon: <PersonAddIcon /> },
+];
 
 export default function MainHeader() {
 	const pathname = usePathname();
-	const [menuOpen, setMenuOpen] = useState(false);
-
-	const linkClass = (href) =>
-		`flex items-center gap-1 px-3 py-2 rounded transition hover:text-teal-600 hover:bg-blue-100 ${
-			pathname === href ? 'font-bold text-yellow bg-gray-200' : 'text-gray-700'
-		}`;
-
+	const [mobileOpen, setMobileOpen] = useState(false);
+	const theme = useTheme();
+	const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 	const { user } = useUser();
 
+	const handleDrawerToggle = () => {
+		setMobileOpen(!mobileOpen);
+	};
+
+	// --- Sub-component: Desktop Nav Item ---
+	const DesktopNavItem = ({ href, label, icon }) => {
+		const isActive = pathname === href;
+		return (
+			<Button
+				component={Link}
+				href={href}
+				startIcon={icon}
+				variant={isActive ? 'soft' : 'text'} // specific to modern MUI, fallback below
+				sx={{
+					color: isActive ? '#00ACAC' : 'text.secondary',
+					fontWeight: isActive ? 700 : 500,
+					bgcolor: isActive ? 'rgba(0, 172, 172, 0.08)' : 'transparent',
+					'&:hover': {
+						bgcolor: 'rgba(0, 172, 172, 0.15)',
+						color: '#00ACAC',
+					},
+					textTransform: 'none',
+					px: 2,
+				}}>
+				{label}
+			</Button>
+		);
+	};
+
+	// --- Sub-component: Mobile Drawer Content ---
+	const drawerContent = (
+		<Box
+			onClick={handleDrawerToggle}
+			sx={{ textAlign: 'center', height: '100%' }}>
+			<Box
+				sx={{
+					py: 3,
+					display: 'flex',
+					flexDirection: 'column',
+					alignItems: 'center',
+					bgcolor: '#f8f9fa',
+				}}>
+				<Image
+					src='/moba.png'
+					alt='Logo'
+					width={60}
+					height={60}
+					className='rounded-full'
+					style={{ marginBottom: 10 }}
+					unoptimized
+				/>
+				<Typography variant='h6' sx={{ color: '#00ACAC', fontWeight: 'bold' }}>
+					MOBA 86
+				</Typography>
+			</Box>
+			<Divider />
+			<List>
+				{NAV_LINKS.map((item) => {
+					const isActive = pathname === item.href;
+					return (
+						<ListItem key={item.href} disablePadding>
+							<ListItemButton
+								component={Link}
+								href={item.href}
+								selected={isActive}
+								sx={{
+									'&.Mui-selected': {
+										bgcolor: 'rgba(0, 172, 172, 0.1)',
+										borderLeft: '4px solid #00ACAC',
+										color: '#00ACAC',
+										'&:hover': { bgcolor: 'rgba(0, 172, 172, 0.2)' },
+									},
+									pl: isActive ? 2 : 2.5, // Visual offset for active state
+								}}>
+								<ListItemIcon sx={{ color: isActive ? '#00ACAC' : 'inherit' }}>
+									{item.icon}
+								</ListItemIcon>
+								<ListItemText
+									primary={item.label}
+									primaryTypographyProps={{ fontWeight: isActive ? 700 : 400 }}
+								/>
+							</ListItemButton>
+						</ListItem>
+					);
+				})}
+			</List>
+
+			{/* Mobile User Info Footer */}
+			<Box
+				sx={{
+					position: 'absolute',
+					bottom: 0,
+					width: '100%',
+					p: 2,
+					borderTop: '1px solid #eee',
+				}}>
+				<SignedIn>
+					<Stack
+						direction='row'
+						alignItems='center'
+						spacing={2}
+						justifyContent='center'>
+						<UserButton showName />
+					</Stack>
+				</SignedIn>
+				<SignedOut>
+					<SignInButton mode='modal'>
+						<Button
+							fullWidth
+							variant='contained'
+							color='primary'
+							startIcon={<LoginIcon />}>
+							Sign In
+						</Button>
+					</SignInButton>
+				</SignedOut>
+			</Box>
+		</Box>
+	);
+
 	return (
-		<nav className='w-full bg-white shadow-sm sticky top-0 z-40'>
-			<div className='max-w-7xl mx-auto px-4 py-2 flex items-center justify-between'>
-				{/* Left: Logo */}
-				<Link href='/' className='flex items-center gap-2'>
-					<Image
-						src='/moba.png'
-						alt='Logo'
-						width={36}
-						height={36}
-						className='rounded-full'
-						style={{ width: 36, height: 36 }}
-						unoptimized
-					/>
-				</Link>
-				<div className='hidden md:block m-1'>
-					<Typography
-						variant='h5'
-						sx={{ flexGrow: 1, fontFamily: '"Eagle Lake", serif' }}>
-						MOBA 86 Group Insurance Policy
-					</Typography>
-				</div>
-
-				{/* Center: Desktop Nav */}
-				<ul className='hidden md:flex gap-4 flex-1 justify-center'>
-					<li>
-						<Link href='/members' className={linkClass('/members')}>
-							<ListAltTwoToneIcon fontSize='small' />
-							List Members
+		<>
+			<AppBar
+				position='sticky'
+				color='default'
+				elevation={1}
+				sx={{ bgcolor: 'white', borderBottom: '1px solid #e0e0e0' }}>
+				<Container maxWidth='xl'>
+					<Toolbar disableGutters sx={{ height: 70 }}>
+						{/* 1. Left: Logo & Branding */}
+						<Link
+							href='/'
+							style={{
+								textDecoration: 'none',
+								display: 'flex',
+								alignItems: 'center',
+								gap: '12px',
+							}}>
+							<Image
+								src='/moba.png'
+								alt='Logo'
+								width={40}
+								height={40}
+								className='rounded-full'
+								unoptimized
+							/>
+							<Box>
+								<Typography
+									variant='h6'
+									noWrap
+									sx={{
+										fontFamily: '"Eagle Lake", serif',
+										color: '#333',
+										fontWeight: 'bold',
+										lineHeight: 1.2,
+										fontSize: { xs: '1rem', md: '1.25rem' }, // Responsive font
+									}}>
+									MOBA 86 Policy
+								</Typography>
+							</Box>
 						</Link>
-					</li>
-					<li>
-						<Link href='/members/create' className={linkClass('/register')}>
-							<PersonAddIcon fontSize='small' />
-							Add New Member
-						</Link>
-					</li>
-				</ul>
 
-				{/* Right: User Info */}
-				<div className='flex items-center gap-3'>
-					<div className='flex flex-col items-end'>
-						<span className='font-semibold leading-4 text-xs sm:text-sm'>
-							{user?.username}
-						</span>
-						{/* <span className='text-[10px] text-gray-600'>{user.role}</span> */}
-					</div>
-					<header className='flex justify-end items-center p-4 gap-4 h-16'>
-						<SignedIn>
-							<UserButton />
-						</SignedIn>
-						<SignedOut>
-							<Button href='/sign-in' variant='outlined' color='error'>
-								Sign In
-							</Button>
-						</SignedOut>
-					</header>
+						{/* Spacer */}
+						<Box sx={{ flexGrow: 1 }} />
 
-					{/* Mobile menu button */}
-					<button
-						className='md:hidden ml-1 p-2 rounded hover:bg-blue-200'
-						aria-label={
-							menuOpen ? 'Close navigation menu' : 'Open navigation menu'
-						}
-						onClick={() => setMenuOpen((prev) => !prev)}>
-						{menuOpen ? <CloseIcon /> : <MenuIcon />}
-					</button>
-				</div>
-			</div>
+						{/* 2. Center: Desktop Navigation */}
+						<Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2, mr: 4 }}>
+							{NAV_LINKS.map((link) => (
+								<DesktopNavItem key={link.href} {...link} />
+							))}
+						</Box>
 
-			{/* Mobile Nav Drawer */}
-			{menuOpen && (
-				<div className='md:hidden bg-blue-200 px-6 py-4'>
-					<ul className='flex flex-col gap-2'>
-						<li>
-							<Link
-								href='/members'
-								className={linkClass('/members')}
-								onClick={() => setMenuOpen(false)}>
-								<ListAltTwoToneIcon fontSize='small' />
-								List Members
-							</Link>
-						</li>
-						<li>
-							<Link
-								href='/members/create'
-								className={linkClass('/members/register')}
-								onClick={() => setMenuOpen(false)}>
-								<PersonAddIcon fontSize='small' />
-								Add New Member
-							</Link>
-						</li>
-					</ul>
-				</div>
-			)}
-		</nav>
+						{/* 3. Right: User Actions & Mobile Toggle */}
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+							{/* Desktop User Info */}
+							<Box sx={{ display: { xs: 'none', md: 'block' } }}>
+								<SignedIn>
+									<Stack direction='row' alignItems='center' spacing={1}>
+										<Box textAlign='right' mr={1}>
+											<Typography variant='body2' fontWeight='bold'>
+												{user?.username || user?.firstName}
+											</Typography>
+											{/* Optional Role Display */}
+											{/* <Typography variant="caption" color="text.secondary" display="block">
+                             {user?.publicMetadata?.role || 'Member'}
+                         </Typography> */}
+										</Box>
+										<UserButton />
+									</Stack>
+								</SignedIn>
+								<SignedOut>
+									<SignInButton mode='modal'>
+										<Button
+											variant='outlined'
+											color='primary'
+											startIcon={<LoginIcon />}>
+											Sign In
+										</Button>
+									</SignInButton>
+								</SignedOut>
+							</Box>
+
+							{/* Mobile Menu Button */}
+							<IconButton
+								color='inherit'
+								aria-label='open drawer'
+								edge='end'
+								onClick={handleDrawerToggle}
+								sx={{ display: { md: 'none' }, ml: 1, color: '#00ACAC' }}>
+								{mobileOpen ? <CloseIcon /> : <MenuIcon />}
+							</IconButton>
+						</Box>
+					</Toolbar>
+				</Container>
+			</AppBar>
+
+			{/* Mobile Navigation Drawer */}
+			<Drawer
+				anchor='right'
+				variant='temporary'
+				open={mobileOpen}
+				onClose={handleDrawerToggle}
+				ModalProps={{
+					keepMounted: true, // Better open performance on mobile.
+				}}
+				sx={{
+					display: { xs: 'block', md: 'none' },
+					'& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 },
+				}}>
+				{drawerContent}
+			</Drawer>
+		</>
 	);
 }
