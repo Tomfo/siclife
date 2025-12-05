@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -39,7 +39,7 @@ import {
 	SignedOut,
 	UserButton,
 	useUser,
-	SignInButton, // Added for cleaner logic
+	SignInButton,
 } from '@clerk/nextjs';
 
 // --- Configuration ---
@@ -48,96 +48,199 @@ const NAV_LINKS = [
 	{ label: 'Add New Member', href: '/members/create', icon: <PersonAddIcon /> },
 ];
 
-export default function MainHeader() {
-	const pathname = usePathname();
-	const [mobileOpen, setMobileOpen] = useState(false);
-	const theme = useTheme();
-	const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-	const { user } = useUser();
+const BRAND_COLOR = '#00ACAC';
+const BRAND_NAME = 'MOBA 86 Policy';
+const LOGO_URL = '/moba.png';
 
-	const handleDrawerToggle = () => {
-		setMobileOpen(!mobileOpen);
-	};
+// --- Sub-component: Brand Logo ---
+const Brand = ({ size = 'small' }) => {
+	const dimension = size === 'small' ? 40 : 60;
+	return (
+		<Link
+			href='/'
+			style={{
+				textDecoration: 'none',
+				display: 'flex',
+				alignItems: 'center',
+				gap: '12px',
+			}}>
+			<Image
+				src={LOGO_URL}
+				alt='MOBA 86 Logo'
+				width={dimension}
+				height={dimension}
+				className='rounded-full'
+				priority
+				unoptimized
+			/>
+			{size === 'small' && (
+				<Typography
+					variant='h6'
+					noWrap
+					sx={{
+						fontFamily: '"Eagle Lake", serif',
+						color: '#333',
+						fontWeight: 'bold',
+						lineHeight: 1.2,
+						fontSize: { xs: '1rem', md: '1.25rem' },
+					}}>
+					{BRAND_NAME}
+				</Typography>
+			)}
+		</Link>
+	);
+};
 
-	// --- Sub-component: Desktop Nav Item ---
-	const DesktopNavItem = ({ href, label, icon }) => {
-		const isActive = pathname === href;
-		return (
-			<Button
+// --- Sub-component: Desktop Navigation Item ---
+const DesktopNavItem = ({ href, label, icon, isActive }) => {
+	return (
+		<Button
+			component={Link}
+			href={href}
+			startIcon={icon}
+			aria-current={isActive ? 'page' : undefined}
+			sx={{
+				color: isActive ? BRAND_COLOR : 'text.secondary',
+				fontWeight: isActive ? 700 : 500,
+				bgcolor: isActive ? 'rgba(0, 172, 172, 0.08)' : 'transparent',
+				'&:hover': {
+					bgcolor: 'rgba(0, 172, 172, 0. 15)',
+					color: BRAND_COLOR,
+				},
+				'&:focus-visible': {
+					outline: `2px solid ${BRAND_COLOR}`,
+					outlineOffset: '2px',
+				},
+				textTransform: 'none',
+				px: 2,
+				py: 1,
+				transition: 'all 0.2s ease-in-out',
+			}}>
+			{label}
+		</Button>
+	);
+};
+
+// --- Sub-component: Mobile Navigation Item ---
+const MobileNavItem = ({ href, label, icon, isActive, onClick }) => {
+	return (
+		<ListItem disablePadding>
+			<ListItemButton
 				component={Link}
 				href={href}
-				startIcon={icon}
-				variant={isActive ? 'soft' : 'text'} // specific to modern MUI, fallback below
+				selected={isActive}
+				onClick={onClick}
+				aria-current={isActive ? 'page' : undefined}
 				sx={{
-					color: isActive ? '#00ACAC' : 'text.secondary',
-					fontWeight: isActive ? 700 : 500,
-					bgcolor: isActive ? 'rgba(0, 172, 172, 0.08)' : 'transparent',
-					'&:hover': {
-						bgcolor: 'rgba(0, 172, 172, 0.15)',
-						color: '#00ACAC',
+					'&. Mui-selected': {
+						bgcolor: 'rgba(0, 172, 172, 0.1)',
+						borderLeft: `4px solid ${BRAND_COLOR}`,
+						color: BRAND_COLOR,
+						'&:hover': { bgcolor: 'rgba(0, 172, 172, 0.2)' },
 					},
-					textTransform: 'none',
-					px: 2,
+					pl: isActive ? 2 : 2.5,
+					py: 1.5,
+					transition: 'all 0.2s ease-in-out',
 				}}>
-				{label}
-			</Button>
-		);
-	};
+				<ListItemIcon sx={{ color: isActive ? BRAND_COLOR : 'inherit' }}>
+					{icon}
+				</ListItemIcon>
+				<ListItemText
+					primary={label}
+					primaryTypographyProps={{ fontWeight: isActive ? 700 : 400 }}
+				/>
+			</ListItemButton>
+		</ListItem>
+	);
+};
 
-	// --- Sub-component: Mobile Drawer Content ---
-	const drawerContent = (
-		<Box
-			onClick={handleDrawerToggle}
-			sx={{ textAlign: 'center', height: '100%' }}>
+// --- Sub-component: User Menu ---
+const UserMenu = () => {
+	const { user } = useUser();
+
+	return (
+		<>
+			<SignedIn>
+				<Stack direction='row' alignItems='center' spacing={1.5}>
+					<Box textAlign='right'>
+						<Typography variant='body2' fontWeight='bold'>
+							{user?.username || user?.firstName || 'User'}
+						</Typography>
+					</Box>
+					<UserButton />
+				</Stack>
+			</SignedIn>
+			<SignedOut>
+				<SignInButton mode='modal'>
+					<Button
+						variant='outlined'
+						color='primary'
+						startIcon={<LoginIcon />}
+						sx={{
+							'&:focus-visible': {
+								outline: `2px solid ${BRAND_COLOR}`,
+							},
+						}}>
+						Sign In
+					</Button>
+				</SignInButton>
+			</SignedOut>
+		</>
+	);
+};
+
+// --- Sub-component: Mobile Drawer ---
+const MobileDrawer = ({ open, onClose, pathname }) => {
+	return (
+		<Drawer
+			anchor='right'
+			variant='temporary'
+			open={open}
+			onClose={onClose}
+			ModalProps={{
+				keepMounted: true,
+			}}
+			sx={{
+				'& .MuiDrawer-paper': {
+					boxSizing: 'border-box',
+					width: { xs: '100%', sm: 280 },
+					display: 'flex',
+					flexDirection: 'column',
+				},
+			}}>
+			{/* Drawer Header */}
 			<Box
 				sx={{
 					py: 3,
+					px: 2,
 					display: 'flex',
 					flexDirection: 'column',
 					alignItems: 'center',
 					bgcolor: '#f8f9fa',
+					gap: 1,
 				}}>
-				<Image
-					src='/moba.png'
-					alt='Logo'
-					width={60}
-					height={60}
-					className='rounded-full'
-					style={{ marginBottom: 10 }}
-					unoptimized
-				/>
-				<Typography variant='h6' sx={{ color: '#00ACAC', fontWeight: 'bold' }}>
-					MOBA 86
+				<Brand size='large' />
+				<Typography
+					variant='body2'
+					sx={{ color: 'text.secondary', textAlign: 'center' }}>
+					Member Management System
 				</Typography>
 			</Box>
 			<Divider />
-			<List>
+
+			{/* Navigation List */}
+			<List sx={{ flex: 1, py: 1 }}>
 				{NAV_LINKS.map((item) => {
 					const isActive = pathname === item.href;
 					return (
-						<ListItem key={item.href} disablePadding>
-							<ListItemButton
-								component={Link}
-								href={item.href}
-								selected={isActive}
-								sx={{
-									'&.Mui-selected': {
-										bgcolor: 'rgba(0, 172, 172, 0.1)',
-										borderLeft: '4px solid #00ACAC',
-										color: '#00ACAC',
-										'&:hover': { bgcolor: 'rgba(0, 172, 172, 0.2)' },
-									},
-									pl: isActive ? 2 : 2.5, // Visual offset for active state
-								}}>
-								<ListItemIcon sx={{ color: isActive ? '#00ACAC' : 'inherit' }}>
-									{item.icon}
-								</ListItemIcon>
-								<ListItemText
-									primary={item.label}
-									primaryTypographyProps={{ fontWeight: isActive ? 700 : 400 }}
-								/>
-							</ListItemButton>
-						</ListItem>
+						<MobileNavItem
+							key={item.href}
+							href={item.href}
+							label={item.label}
+							icon={item.icon}
+							isActive={isActive}
+							onClick={onClose}
+						/>
 					);
 				})}
 			</List>
@@ -145,19 +248,13 @@ export default function MainHeader() {
 			{/* Mobile User Info Footer */}
 			<Box
 				sx={{
-					position: 'absolute',
-					bottom: 0,
-					width: '100%',
 					p: 2,
 					borderTop: '1px solid #eee',
+					mt: 'auto',
 				}}>
 				<SignedIn>
-					<Stack
-						direction='row'
-						alignItems='center'
-						spacing={2}
-						justifyContent='center'>
-						<UserButton showName />
+					<Stack spacing={1.5}>
+						<UserMenu />
 					</Stack>
 				</SignedIn>
 				<SignedOut>
@@ -166,13 +263,42 @@ export default function MainHeader() {
 							fullWidth
 							variant='contained'
 							color='primary'
-							startIcon={<LoginIcon />}>
+							startIcon={<LoginIcon />}
+							onClick={onClose}>
 							Sign In
 						</Button>
 					</SignInButton>
 				</SignedOut>
 			</Box>
-		</Box>
+		</Drawer>
+	);
+};
+
+// --- Main Component ---
+export default function MainHeader() {
+	const pathname = usePathname();
+	const [mobileOpen, setMobileOpen] = useState(false);
+	const theme = useTheme();
+	const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+	// Toggle drawer
+	const handleDrawerToggle = () => {
+		setMobileOpen((prev) => !prev);
+	};
+
+	// Close drawer
+	const handleDrawerClose = () => {
+		setMobileOpen(false);
+	};
+
+	// Memoize nav items to prevent unnecessary re-renders
+	const navItems = useMemo(
+		() =>
+			NAV_LINKS.map((link) => ({
+				...link,
+				isActive: pathname === link.href,
+			})),
+		[pathname]
 	);
 
 	return (
@@ -181,111 +307,77 @@ export default function MainHeader() {
 				position='sticky'
 				color='default'
 				elevation={1}
-				sx={{ bgcolor: 'white', borderBottom: '1px solid #e0e0e0' }}>
+				sx={{
+					bgcolor: 'background.paper',
+					borderBottom: '1px solid #e0e0e0',
+				}}>
 				<Container maxWidth='xl'>
-					<Toolbar disableGutters sx={{ height: 70 }}>
+					<Toolbar
+						disableGutters
+						sx={{
+							height: { xs: 64, md: 70 },
+							display: 'flex',
+							justifyContent: 'space-between',
+							alignItems: 'center',
+							gap: { xs: 1, md: 2 },
+						}}>
 						{/* 1. Left: Logo & Branding */}
-						<Link
-							href='/'
-							style={{
-								textDecoration: 'none',
-								display: 'flex',
-								alignItems: 'center',
-								gap: '12px',
-							}}>
-							<Image
-								src='/moba.png'
-								alt='Logo'
-								width={40}
-								height={40}
-								className='rounded-full'
-								unoptimized
-							/>
-							<Box>
-								<Typography
-									variant='h6'
-									noWrap
-									sx={{
-										fontFamily: '"Eagle Lake", serif',
-										color: '#333',
-										fontWeight: 'bold',
-										lineHeight: 1.2,
-										fontSize: { xs: '1rem', md: '1.25rem' }, // Responsive font
-									}}>
-									MOBA 86 Policy
-								</Typography>
-							</Box>
-						</Link>
-
-						{/* Spacer */}
-						<Box sx={{ flexGrow: 1 }} />
+						<Brand size='small' />
 
 						{/* 2. Center: Desktop Navigation */}
-						<Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2, mr: 4 }}>
-							{NAV_LINKS.map((link) => (
-								<DesktopNavItem key={link.href} {...link} />
+						<Stack
+							direction='row'
+							spacing={1}
+							sx={{
+								display: { xs: 'none', md: 'flex' },
+								flex: 1,
+								justifyContent: 'center',
+								ml: 4,
+							}}>
+							{navItems.map((item) => (
+								<DesktopNavItem
+									key={item.href}
+									href={item.href}
+									label={item.label}
+									icon={item.icon}
+									isActive={item.isActive}
+								/>
 							))}
-						</Box>
+						</Stack>
 
 						{/* 3. Right: User Actions & Mobile Toggle */}
-						<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
 							{/* Desktop User Info */}
 							<Box sx={{ display: { xs: 'none', md: 'block' } }}>
-								<SignedIn>
-									<Stack direction='row' alignItems='center' spacing={1}>
-										<Box textAlign='right' mr={1}>
-											<Typography variant='body2' fontWeight='bold'>
-												{user?.username || user?.firstName}
-											</Typography>
-											{/* Optional Role Display */}
-											{/* <Typography variant="caption" color="text.secondary" display="block">
-                             {user?.publicMetadata?.role || 'Member'}
-                         </Typography> */}
-										</Box>
-										<UserButton />
-									</Stack>
-								</SignedIn>
-								<SignedOut>
-									<SignInButton mode='modal'>
-										<Button
-											variant='outlined'
-											color='primary'
-											startIcon={<LoginIcon />}>
-											Sign In
-										</Button>
-									</SignInButton>
-								</SignedOut>
+								<UserMenu />
 							</Box>
 
 							{/* Mobile Menu Button */}
-							<IconButton
-								color='inherit'
-								aria-label='open drawer'
-								edge='end'
-								onClick={handleDrawerToggle}
-								sx={{ display: { md: 'none' }, ml: 1, color: '#00ACAC' }}>
-								{mobileOpen ? <CloseIcon /> : <MenuIcon />}
-							</IconButton>
+							{isMobile && (
+								<IconButton
+									color='inherit'
+									aria-label={
+										mobileOpen
+											? 'close navigation menu'
+											: 'open navigation menu'
+									}
+									edge='end'
+									onClick={handleDrawerToggle}
+									sx={{ color: BRAND_COLOR }}>
+									{mobileOpen ? <CloseIcon /> : <MenuIcon />}
+								</IconButton>
+							)}
 						</Box>
 					</Toolbar>
 				</Container>
 			</AppBar>
 
 			{/* Mobile Navigation Drawer */}
-			<Drawer
-				anchor='right'
-				variant='temporary'
+			<MobileDrawer
 				open={mobileOpen}
-				onClose={handleDrawerToggle}
-				ModalProps={{
-					keepMounted: true, // Better open performance on mobile.
-				}}
-				sx={{
-					display: { xs: 'block', md: 'none' },
-					'& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 },
-				}}>
-				{drawerContent}
-			</Drawer>
+				onClose={handleDrawerClose}
+				pathname={pathname}
+			/>
 		</>
 	);
 }
