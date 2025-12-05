@@ -49,7 +49,7 @@ const NAV_LINKS = [
 ];
 
 const BRAND_COLOR = '#00ACAC';
-const BRAND_NAME = 'MOBA 86 Policy';
+const BRAND_NAME = 'MOBA 86 Life Policy';
 const LOGO_URL = '/moba.png';
 
 // --- Sub-component: Brand Logo ---
