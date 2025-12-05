@@ -185,13 +185,13 @@ export default function RegistrationForm() {
 				{/* Header */}
 				<Box sx={{ textAlign: 'center', mb: 4 }}>
 					<Typography
-						variant='h4'
-						fontWeight='800'
-						color='primary.main'
+						variant='h5'
+						fontWeight='600'
+						color='text.secondary'
 						gutterBottom>
-						Insurance Registration
+						Registration
 					</Typography>
-					<Typography variant='subtitle1' color='text.secondary'>
+					<Typography variant='subtitle1' color='text.primary'>
 						Complete the steps below to register a new policy member.
 					</Typography>
 				</Box>
