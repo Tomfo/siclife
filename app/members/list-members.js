@@ -82,8 +82,18 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 
 // 1. Mobile Card View
 function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
+	const borderColor = member.declaration ? '#2e7d32' : '#ed6c02'; // Green if true, Orange if false
 	return (
-		<Card variant='outlined' sx={{ mb: 2, borderRadius: 2 }}>
+		// Helper variable for dynamic color
+
+		<Card
+			variant='outlined'
+			sx={{
+				mb: 2,
+				borderRadius: 2,
+				boxShadow: 3,
+				borderLeft: `4px solid ${borderColor}`, // Dynamic Border Logic
+			}}>
 			<CardContent>
 				<Box
 					display='flex'
@@ -125,24 +135,12 @@ function MobileMemberCard({ member, canEdit, onView, onEdit, onDelete }) {
 							{member.telephone}
 						</Typography>
 					</Box>
-					{/* <Box display='flex' justifyContent='space-between'>
-						<Typography variant='body2' color='text.secondary'>
-							Gender:
-						</Typography>
-						<Typography variant='body2' fontWeight={500}>
-							{member.gender}
-						</Typography>
-					</Box> */}
 				</Stack>
 
 				{canEdit && (
 					<>
 						<Divider sx={{ my: 1 }} />
-						<Box
-							display='flex'
-							justifyContent='flex-end'
-							gap={1}
-							bgcolor='#fafafa'>
+						<Box display='flex' justifyContent='flex-end' gap={1}>
 							<Button
 								size='small'
 								color='secondary'
